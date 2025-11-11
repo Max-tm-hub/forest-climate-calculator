@@ -13,31 +13,30 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
-import zoomPlugin from 'chartjs-plugin-zoom';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, zoomPlugin);
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler);
 
 export default function ResultsSection({ results, inputs }) {
-  if (!results) return null;
+  if (!results || !inputs) return null;
 
   const years = Array.from({ length: inputs.projectYears + 1 }, (_, i) => i);
   const yearLabels = years.map(y => y % 5 === 0 ? y.toString() : '');
 
-  // ✅ График: Углеродные единицы
+  // ✅ График УЕ — СТРОГО с data: [...]
   const carbonData = {
     labels: years.map(String),
     datasets: [{
       label: 'Углеродные единицы, т',
-      data: results.carbonUnits,  // ← обязательно `data: [...]`
+       results.carbonUnits, // ← обязательный массив чисел
       borderColor: '#1976d2',
       backgroundColor: 'rgba(25, 118, 210, 0.1)',
       stepped: 'before',
       fill: true,
-      tension: 0,
+      tension: 0
     }]
   };
 
-  // ✅ График: Денежные потоки
+  // ✅ График ДП — СТРОГО с data: [...]
   const cumulativeCashFlow = results.cashFlows.reduce((arr, cf, i) => {
     arr[i] = (arr[i - 1] || 0) + cf;
     return arr;
@@ -49,20 +48,20 @@ export default function ResultsSection({ results, inputs }) {
       {
         type: 'bar',
         label: 'Чистый ДП',
-        data: results.cashFlows,  // ← обязательно `data: [...]`
+         results.cashFlows, // ← массив чисел
         backgroundColor: ctx => ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 0.7)' : 'rgba(244, 67, 54, 0.7)',
         borderColor: ctx => ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)',
-        borderWidth: 1,
+        borderWidth: 1
       },
       {
         type: 'line',
         label: 'Накопленный ДП',
-        data: cumulativeCashFlow,  // ← обязательно `data: [...]`
+         cumulativeCashFlow, // ← массив чисел
         borderColor: '#673ab7',
         backgroundColor: 'transparent',
         borderWidth: 2,
         fill: false,
-        tension: 0.2,
+        tension: 0.2
       }
     ]
   };
@@ -76,32 +75,27 @@ export default function ResultsSection({ results, inputs }) {
         callbacks: {
           label: function(ctx) {
             const value = ctx.parsed.y;
-            return `${ctx.dataset.label}: ${value.toLocaleString()} ${ctx.dataset.label.includes('единиц') ? 'т' : '₽'}`;
+            const unit = ctx.dataset.label.includes('единиц') ? 'т' : '₽';
+            return `${ctx.dataset.label}: ${value.toLocaleString()} ${unit}`;
           }
         }
-      },
-      zoom: {
-        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
-        pan: { enabled: true, mode: 'x' }
       }
     },
     scales: {
-      x: {
-        ticks: { callback: (_, i) => yearLabels[i] }
-      }
+      x: { ticks: { callback: (_, i) => yearLabels[i] } }
     }
   };
 
   return (
     <div style={{ marginTop: '30px' }}>
       <h3>Результаты расчёта</h3>
-
+      
       {/* Сводка */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         {Object.entries(results.financials).map(([key, value]) => (
-          <div key={key} style={{ border: '1px solid #eee', padding: '12px', textAlign: 'center', backgroundColor: '#f9f9f9' }}>
-            <div><strong>{key === 'npv' ? 'NPV' : key}</strong></div>
-            <div>{value}</div>
+          <div key={key} style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+            <strong>{key === 'npv' ? 'NPV' : key}</strong><br />
+            {value}
           </div>
         ))}
       </div>
