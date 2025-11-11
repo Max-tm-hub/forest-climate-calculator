@@ -8,7 +8,27 @@ export function calculateProject(params) {
     projectYears = 40,
     discountRate = 0.23,
     inflation = 0.025,
-    // ... остальные параметры
+    // Остальные параметры (берём из Excel)
+    landPrice = 500000,
+    prepPerHa = 20000,
+    seedlingsPerHa = 1300,
+    seedlingCost = 120,
+    plantingCostPerHa = 10000,
+    pestsInitialPerHa = 8000,
+    equipmentPerHa = 20000,
+    designVerification = 600000,
+    weedingCostPerHa = 5000,
+    weedingFreq = 2,
+    pruningCostPerHa = 1000,
+    pruningFreq = 1,
+    thinningCostPerHa = 120000,
+    carbonUnitPrice = 1100,
+    timberPrice = 1900,
+    timberVolumePerHa = 200,
+    timberHarvestCost = 50,
+    transportCostPerKm = 10,
+    transportDistance = 50,
+    profitTaxRate = 0.25,
   } = params;
 
   // 1. Проверка породы
@@ -22,10 +42,9 @@ export function calculateProject(params) {
   }
 
   // 2. Инвестиции (как в Excel)
-  const landPrep = 10_500_000;
-  const seedlingsPlanting = 9_156_000;
-  const machines = 10_000_000;
-  const designVerification = 600_000;
+  const landPrep = 10_500_000; // ← Из Excel
+  const seedlingsPlanting = 9_156_000; // ← Из Excel
+  const machines = 10_000_000; // ← Из Excel
   const totalInvestment = landPrep + seedlingsPlanting + machines + designVerification;
   const depreciable = totalInvestment - landPrep;
   const annualDepreciation = projectYears > 0 ? depreciable / projectYears : 0;
@@ -47,23 +66,23 @@ export function calculateProject(params) {
     }
     carbonUnits[y] = cu;
 
-    const revCarbon = y > 0 ? cu * 1100 * inflationFactor[y] : 0; // carbonUnitPrice = 1100
+    const revCarbon = y > 0 ? cu * carbonUnitPrice * inflationFactor[y] : 0;
     let revTimber = 0;
     if (y === projectYears) {
-      const volume = 200 * areaHa; // timberVolumePerHa = 200
-      const harvestCost = 50 * volume;
-      const transportCost = 10 * 50 * volume; // 10 ₽/м³/км * 50 км
-      revTimber = volume * 1900 * inflationFactor[y] - (harvestCost + transportCost) * inflationFactor[y];
+      const volume = timberVolumePerHa * areaHa;
+      const harvestCost = timberHarvestCost * volume;
+      const transportCost = transportCostPerKm * transportDistance * volume;
+      revTimber = volume * timberPrice * inflationFactor[y] - (harvestCost + transportCost) * inflationFactor[y];
     }
     const totalRevenue = revCarbon + revTimber;
     revenues[y] = totalRevenue;
 
     let annualOpex = 0;
     if (y > 0) {
-      annualOpex += 5000 * 2 * areaHa * inflationFactor[y]; // weeding
-      annualOpex += 1000 * 1 * areaHa * inflationFactor[y]; // pruning
+      annualOpex += weedingCostPerHa * weedingFreq * areaHa * inflationFactor[y];
+      annualOpex += pruningCostPerHa * pruningFreq * areaHa * inflationFactor[y];
       if (y % 10 === 0) {
-        annualOpex += 120000 * areaHa * inflationFactor[y]; // thinning
+        annualOpex += thinningCostPerHa * areaHa * inflationFactor[y];
       }
       annualOpex += cu * 10 * inflationFactor[y]; // выпуск УЕ
     }
@@ -71,7 +90,7 @@ export function calculateProject(params) {
 
     const ebitda = totalRevenue + opex[y];
     const profitBeforeTax = ebitda - (y > 0 ? annualDepreciation : 0);
-    const tax = profitBeforeTax > 0 ? profitBeforeTax * 0.25 : 0; // profitTaxRate = 25%
+    const tax = profitBeforeTax > 0 ? profitBeforeTax * profitTaxRate : 0;
     const cf = y === 0 ? -totalInvestment : ebitda - tax;
     cashFlows[y] = cf;
     discountedCashFlows[y] = cf / Math.pow(1 + discountRate, y);
