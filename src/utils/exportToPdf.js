@@ -2,49 +2,47 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-export function exportGostReport(resultsByScenario, inputs) {
-  const doc = new jsPDF({ fontSize: 12 });
-  const w = doc.internal.pageSize.width;
-  const m = 20;
+export function exportGostReport(results, inputs) {
+  // ✅ Используем Times New Roman через embed — но проще через html2canvas
+  import('html2canvas').then(({ default: html2canvas }) => {
+    const container = document.createElement('div');
+    container.style.fontFamily = 'Arial, sans-serif';
+    container.style.padding = '20px';
+    container.style.width = '210mm';
+    container.style.lineHeight = 1.5;
 
-  // === Титульный лист (ГОСТ Р 7.0.97-2016) ===
-  doc.setFont('times', 'normal');
-  doc.text('Министерство природных ресурсов и экологии Российской Федерации', m, 30);
-  doc.text('Федеральное государственное бюджетное учреждение', m, 37);
-  doc.text('«Научно-исследовательский институт лесного хозяйства»', m, 44);
-  doc.line(m, 50, w - m, 50);
-  doc.setFontSize(16);
-  doc.text('ОТЧЁТ', w / 2, 80, { align: 'center' });
-  doc.text('о расчёте эффективности лесного климатического проекта', w / 2, 88, { align: 'center' });
-  doc.setFontSize(12);
-  doc.text(`Порода: ${inputs.treeType}`, m, 110);
-  doc.text(`Площадь: ${inputs.areaHa} га`, m, 118);
-  doc.text(`Срок реализации: ${inputs.projectYears} лет`, m, 126);
-  doc.text(`Дата формирования: ${new Date().toLocaleDateString('ru-RU')}`, m, 140);
+    container.innerHTML = `
+      <h2 style="text-align: center; color: #1976d2;">Отчёт по лесному климатическому проекту</h2>
+      <p><strong>Порода:</strong> ${inputs.treeType}</p>
+      <p><strong>Площадь:</strong> ${inputs.areaHa} га</p>
+      <p><strong>Срок:</strong> ${inputs.projectYears} лет</p>
+      <p><strong>Дата:</strong> ${new Date().toLocaleDateString('ru-RU')}</p>
 
-  // === Сравнение сценариев ===
-  doc.addPage();
-  doc.text('Таблица 1 — Сравнение финансовых показателей', m, 20);
-  const tableData = [
-    ['Показатель', 'Пессимистичный', 'Базовый', 'Оптимистичный'],
-    ['NPV, ₽', format(resultsByScenario.pessimistic.npv), format(resultsByScenario.base.npv), format(resultsByScenario.optimistic.npv)],
-    ['IRR, %', resultsByScenario.pessimistic.irr, resultsByScenario.base.irr, resultsByScenario.optimistic.irr],
-    ['Срок окупаемости (простой), лет', resultsByScenario.pessimistic.simplePayback, resultsByScenario.base.simplePayback, resultsByScenario.optimistic.simplePayback],
-    ['Себестоимость УЕ, ₽/т', resultsByScenario.pessimistic.cuCost, resultsByScenario.base.cuCost, resultsByScenario.optimistic.cuCost]
-  ];
+      <h3>Финансовые показатели</h3>
+      <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+        <tr><th>Показатель</th><th>Значение</th></tr>
+        <tr><td>NPV</td><td>${results.npv.toLocaleString('ru')} ₽</td></tr>
+        <tr><td>IRR</td><td>${results.irr}</td></tr>
+        <tr><td>Срок окупаемости (простой)</td><td>${results.simplePayback} лет</td></tr>
+        <tr><td>Себестоимость УЕ</td><td>${results.cuCost} ₽/т</td></tr>
+      </table>
+    `;
 
-  autoTable(doc, {
-    startY: 30,
-    head: [tableData[0]],
-    body: tableData.slice(1),
-    theme: 'grid',
-    headStyles: { font: 'times', fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0, 0, 0] },
-    bodyStyles: { font: 'times', fontSize: 12 }
+    document.body.appendChild(container);
+
+    html2canvas(container, { scale: 2 }).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Отчёт_ЛКП_${inputs.treeType}_${inputs.areaHa}га.pdf`);
+
+      document.body.removeChild(container);
+    }).catch(err => {
+      console.error('PDF export error:', err);
+      alert('Ошибка генерации PDF. Откройте DevTools (F12) для деталей.');
+    });
   });
-
-  doc.save(`Отчёт_ЛКП_${inputs.treeType}_${inputs.areaHa}га.pdf`);
-}
-
-function format(num) {
-  return num ? Number(num).toLocaleString('ru') : '—';
 }
