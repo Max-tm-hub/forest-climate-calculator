@@ -1,85 +1,59 @@
 // src/components/ResultsSection.jsx
 import React from 'react';
 import { Bar, Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from 'chart.js';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
 
 export default function ResultsSection({ results, inputs }) {
-  // Защита от undefined
-  if (!results || !results.carbonUnits || !results.cashFlows) {
-    return <div>Результаты ещё не рассчитаны</div>;
-  }
+  if (!results || !inputs) return <div>Результаты ещё не рассчитаны</div>;
 
   const years = Array.from({ length: inputs.projectYears + 1 }, (_, i) => i);
-  const yearLabels = years.map(y => (y % 5 === 0 ? String(y) : ''));
+  const yearLabels = years.map(y => y % 5 === 0 ? String(y) : '');
 
-  // ✅ 1. График УЕ — ЧЁТКО: data — массив чисел
+  // ✅ 1. УГЛЕРОДНЫЕ ЕДИНИЦЫ — ОБЯЗАТЕЛЬНО data: [...] 
   const carbonData = {
     labels: years.map(String),
     datasets: [
       {
         label: 'Углеродные единицы, т',
-        , // ✅ массив чисел, проверен
+        // ⬇️ ВОТ ОНО — ИМЯ СВОЙСТВА data ОБЯЗАТЕЛЬНО:
+         results.carbonUnits,
         borderColor: '#1976d2',
         backgroundColor: 'rgba(25, 118, 210, 0.1)',
         stepped: 'before',
         fill: true,
-        tension: 0,
-      },
-    ],
+        tension: 0
+      }
+    ]
   };
 
-  // ✅ 2. Накопленный ДП
+  // ✅ 2. НАКОПЛЕННЫЙ ДЕНЕЖНЫЙ ПОТОК
   const cumulativeCashFlow = results.cashFlows.reduce((arr, cf, i) => {
     arr[i] = (arr[i - 1] || 0) + cf;
     return arr;
   }, []);
 
-  // ✅ 3. График ДП
+  // ✅ 3. ДЕНЕЖНЫЕ ПОТОКИ — тоже data: [...]
   const cashFlowData = {
     labels: years.map(String),
     datasets: [
       {
         type: 'bar',
         label: 'Чистый ДП',
-         results.cashFlows,
-        backgroundColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 0.7)' : 'rgba(244, 67, 54, 0.7)'),
-        borderColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)'),
-        borderWidth: 1,
+         results.cashFlows, // ← data: [...] — строго!
+        backgroundColor: (ctx) => ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 0.7)' : 'rgba(244, 67, 54, 0.7)',
+        borderColor: (ctx) => ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)',
+        borderWidth: 1
       },
       {
         type: 'line',
         label: 'Накопленный ДП',
-         cumulativeCashFlow,
+         cumulativeCashFlow, // ← data: [...] — строго!
         borderColor: '#673ab7',
         backgroundColor: 'transparent',
         borderWidth: 2,
         fill: false,
-        tension: 0.2,
-      },
-    ],
+        tension: 0.2
+      }
+    ]
   };
 
   const options = {
@@ -89,21 +63,21 @@ export default function ResultsSection({ results, inputs }) {
       legend: { position: 'top' },
       tooltip: {
         callbacks: {
-          label: function (ctx) {
+          label: (ctx) => {
             const value = ctx.parsed.y;
             const unit = ctx.dataset.label.includes('единиц') ? 'т' : '₽';
             return `${ctx.dataset.label}: ${value.toLocaleString()} ${unit}`;
-          },
-        },
-      },
+          }
+        }
+      }
     },
     scales: {
       x: {
         ticks: {
-          callback: (_, i) => yearLabels[i],
-        },
-      },
-    },
+          callback: (_, i) => yearLabels[i]
+        }
+      }
+    }
   };
 
   return (
@@ -111,33 +85,14 @@ export default function ResultsSection({ results, inputs }) {
       <h3>Результаты расчёта</h3>
 
       {/* Сводка */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: '12px',
-          marginBottom: '20px',
-        }}
-      >
-        {Object.entries(results.financials).map(([key, value]) => (
-          <div
-            key={key}
-            style={{
-              padding: '10px',
-              border: '1px solid #ddd',
-              textAlign: 'center',
-            }}
-          >
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+        {results.financials && Object.entries(results.financials).map(([key, value]) => (
+          <div key={key} style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
             <strong>
-              {key === 'npv'
-                ? 'NPV'
-                : key === 'irr'
-                ? 'IRR'
-                : key === 'cuCost'
-                ? 'Себестоимость УЕ'
-                : key}
-            </strong>
-            <br />
+              {key === 'npv' ? 'NPV' :
+               key === 'irr' ? 'IRR' :
+               key === 'cuCost' ? 'Себестоимость УЕ' : key}
+            </strong><br />
             {value}
           </div>
         ))}
