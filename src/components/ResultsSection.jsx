@@ -34,14 +34,13 @@ export default function ResultsSection({ results, inputs }) {
   const years = Array.from({ length: inputs.projectYears + 1 }, (_, i) => i);
   const yearLabels = years.map(y => (y % 5 === 0 ? String(y) : ''));
 
-  // ✅ 1. График УЕ — использует данные из Excel: "Количество углеродных единиц"
+  // ✅ 1. График УЕ — ОБЯЗАТЕЛЬНО: data: [...]
   const carbonData = {
     labels: years.map(String),
     datasets: [
       {
         label: 'Углеродные единицы, т',
-        // ⚠️ ВАЖНО: результат из calculateProject → carbonUnits
-         results.carbonUnits,
+        data: results.carbonUnits, // ✅ ← ИМЯ СВОЙСТВА ОБЯЗАТЕЛЬНО
         borderColor: '#1976d2',
         backgroundColor: 'rgba(25, 118, 210, 0.1)',
         stepped: 'before',
@@ -51,20 +50,20 @@ export default function ResultsSection({ results, inputs }) {
     ],
   };
 
-  // ✅ 2. Накопленный денежный поток
+  // ✅ 2. Накопленный ДП
   const cumulativeCashFlow = results.cashFlows.reduce((arr, cf, i) => {
     arr[i] = (arr[i - 1] || 0) + cf;
     return arr;
   }, []);
 
-  // ✅ 3. График денежных потоков
+  // ✅ 3. График ДП
   const cashFlowData = {
     labels: years.map(String),
     datasets: [
       {
         type: 'bar',
         label: 'Чистый ДП',
-         results.cashFlows,
+        data: results.cashFlows, // ✅ ← ИМЯ СВОЙСТВА ОБЯЗАТЕЛЬНО
         backgroundColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 0.7)' : 'rgba(244, 67, 54, 0.7)'),
         borderColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)'),
         borderWidth: 1,
@@ -72,7 +71,7 @@ export default function ResultsSection({ results, inputs }) {
       {
         type: 'line',
         label: 'Накопленный ДП',
-         cumulativeCashFlow,
+        data: cumulativeCashFlow, // ✅ ← ИМЯ СВОЙСТВА ОБЯЗАТЕЛЬНО
         borderColor: '#673ab7',
         backgroundColor: 'transparent',
         borderWidth: 2,
@@ -110,7 +109,7 @@ export default function ResultsSection({ results, inputs }) {
     <div style={{ marginTop: '30px' }}>
       <h3>Результаты расчёта</h3>
 
-      {/* Сводка финансовых показателей */}
+      {/* Сводка */}
       <div
         style={{
           display: 'grid',
@@ -127,7 +126,6 @@ export default function ResultsSection({ results, inputs }) {
                 padding: '10px',
                 border: '1px solid #ddd',
                 textAlign: 'center',
-                backgroundColor: '#fafafa',
               }}
             >
               <strong>
