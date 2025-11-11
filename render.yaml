@@ -2,8 +2,5 @@ services:
   - type: web
     name: forest-climate-calculator
     env: static
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npm run build  # ← ВАЖНО: не yarn!
     staticPublishPath: ./build
-    envVars:
-      - key: NODE_VERSION
-        value: 18
