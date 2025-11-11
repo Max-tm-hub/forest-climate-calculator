@@ -8,21 +8,18 @@ export default function ResultsSection({ results, inputs }) {
   const years = Array.from({ length: inputs.projectYears + 1 }, (_, i) => i);
   const yearLabels = years.map(y => y % 5 === 0 ? String(y) : '');
 
-  // ✅ 1. УГЛЕРОДНЫЕ ЕДИНИЦЫ — ОБЯЗАТЕЛЬНО data: [...] 
+  // ✅ 1. УГЛЕРОДНЫЕ ЕДИНИЦЫ — с  [...]
   const carbonData = {
     labels: years.map(String),
-    datasets: [
-      {
-        label: 'Углеродные единицы, т',
-        // ⬇️ ВОТ ОНО — ИМЯ СВОЙСТВА data ОБЯЗАТЕЛЬНО:
-         results.carbonUnits,
-        borderColor: '#1976d2',
-        backgroundColor: 'rgba(25, 118, 210, 0.1)',
-        stepped: 'before',
-        fill: true,
-        tension: 0
-      }
-    ]
+    datasets: [{
+      label: 'Углеродные единицы, т',
+       results.carbonUnits, // ← ИМЯ СВОЙСТВА ОБЯЗАТЕЛЬНО
+      borderColor: '#1976d2',
+      backgroundColor: 'rgba(25, 118, 210, 0.1)',
+      stepped: 'before',
+      fill: true,
+      tension: 0
+    }]
   };
 
   // ✅ 2. НАКОПЛЕННЫЙ ДЕНЕЖНЫЙ ПОТОК
@@ -31,14 +28,14 @@ export default function ResultsSection({ results, inputs }) {
     return arr;
   }, []);
 
-  // ✅ 3. ДЕНЕЖНЫЕ ПОТОКИ — тоже data: [...]
+  // ✅ 3. ДЕНЕЖНЫЕ ПОТОКИ — тоже с  [...]
   const cashFlowData = {
     labels: years.map(String),
     datasets: [
       {
         type: 'bar',
         label: 'Чистый ДП',
-         results.cashFlows, // ← data: [...] — строго!
+         results.cashFlows, // ←  [...]
         backgroundColor: (ctx) => ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 0.7)' : 'rgba(244, 67, 54, 0.7)',
         borderColor: (ctx) => ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)',
         borderWidth: 1
@@ -46,7 +43,7 @@ export default function ResultsSection({ results, inputs }) {
       {
         type: 'line',
         label: 'Накопленный ДП',
-         cumulativeCashFlow, // ← data: [...] — строго!
+         cumulativeCashFlow, // ←  [...]
         borderColor: '#673ab7',
         backgroundColor: 'transparent',
         borderWidth: 2,
@@ -72,19 +69,13 @@ export default function ResultsSection({ results, inputs }) {
       }
     },
     scales: {
-      x: {
-        ticks: {
-          callback: (_, i) => yearLabels[i]
-        }
-      }
+      x: { ticks: { callback: (_, i) => yearLabels[i] } }
     }
   };
 
   return (
     <div style={{ marginTop: '30px' }}>
       <h3>Результаты расчёта</h3>
-
-      {/* Сводка */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
         {results.financials && Object.entries(results.financials).map(([key, value]) => (
           <div key={key} style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
@@ -98,7 +89,6 @@ export default function ResultsSection({ results, inputs }) {
         ))}
       </div>
 
-      {/* Графики */}
       <h4>Динамика углеродных единиц</h4>
       <div style={{ height: '350px' }}>
         <Line data={carbonData} options={options} />
