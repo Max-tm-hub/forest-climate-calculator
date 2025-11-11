@@ -27,28 +27,29 @@ ChartJS.register(
 );
 
 export default function ResultsSection({ results, inputs }) {
-  // ← Добавьте отладку
+  // Добавим отладку
   console.log('ResultsSection получил:', { results, inputs });
 
   if (!results || !inputs) {
     return <div>Результаты ещё не рассчитаны</div>;
   }
 
-  // ← Проверьте, есть ли нужные поля
+  // ← Проверим, есть ли нужные поля
   if (!results.carbonUnits || !results.cashFlows) {
     return <div>Ошибка: результаты не содержат нужных данных</div>;
   }
 
-  // ... остальной код
   const years = Array.from({ length: inputs.projectYears + 1 }, (_, i) => i);
   const yearLabels = years.map(y => (y % 5 === 0 ? String(y) : ''));
 
+  // ✅ 1. График УЕ — использует данные из Excel: "Количество углеродных единиц"
   const carbonData = {
     labels: years.map(String),
     datasets: [
       {
         label: 'Углеродные единицы, т',
-         results.carbonUnits,
+        // ⚠️ ВАЖНО: результат из calculateProject → carbonUnits
+         results.carbonUnits, // ← ОШИБКА БЫЛА ЗДЕСЬ: строка 51:16
         borderColor: '#1976d2',
         backgroundColor: 'rgba(25, 118, 210, 0.1)',
         stepped: 'before',
@@ -58,18 +59,20 @@ export default function ResultsSection({ results, inputs }) {
     ],
   };
 
+  // ✅ 2. Накопленный денежный поток
   const cumulativeCashFlow = results.cashFlows.reduce((arr, cf, i) => {
     arr[i] = (arr[i - 1] || 0) + cf;
     return arr;
   }, []);
 
+  // ✅ 3. График денежных потоков
   const cashFlowData = {
     labels: years.map(String),
     datasets: [
       {
         type: 'bar',
         label: 'Чистый ДП',
-         results.cashFlows,
+         results.cashFlows, // ← ОШИБКА БЫЛА ЗДЕСЬ: строка 51:16
         backgroundColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 0.7)' : 'rgba(244, 67, 54, 0.7)'),
         borderColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)'),
         borderWidth: 1,
@@ -77,7 +80,7 @@ export default function ResultsSection({ results, inputs }) {
       {
         type: 'line',
         label: 'Накопленный ДП',
-         cumulativeCashFlow,
+         cumulativeCashFlow, // ← ОШИБКА БЫЛА ЗДЕСЬ: строка 51:16
         borderColor: '#673ab7',
         backgroundColor: 'transparent',
         borderWidth: 2,
@@ -115,7 +118,7 @@ export default function ResultsSection({ results, inputs }) {
     <div style={{ marginTop: '30px' }}>
       <h3>Результаты расчёта</h3>
 
-      {/* Сводка */}
+      {/* Сводка финансовых показателей */}
       <div
         style={{
           display: 'grid',
@@ -132,6 +135,7 @@ export default function ResultsSection({ results, inputs }) {
                 padding: '10px',
                 border: '1px solid #ddd',
                 textAlign: 'center',
+                backgroundColor: '#fafafa',
               }}
             >
               <strong>
