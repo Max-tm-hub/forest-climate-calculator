@@ -1,56 +1,85 @@
 // src/components/ResultsSection.jsx
 import React from 'react';
 import { Bar, Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 export default function ResultsSection({ results, inputs }) {
-  if (!results || !inputs) return <div>Результаты ещё не рассчитаны</div>;
+  if (!results || !inputs) {
+    return <div>Результаты ещё не рассчитаны</div>;
+  }
 
   const years = Array.from({ length: inputs.projectYears + 1 }, (_, i) => i);
-  const yearLabels = years.map(y => y % 5 === 0 ? String(y) : '');
+  const yearLabels = years.map(y => (y % 5 === 0 ? String(y) : ''));
 
-  // ✅ 1. УГЛЕРОДНЫЕ ЕДИНИЦЫ — с  [...]
+  // ✅ 1. График УЕ — использует данные из Excel: "Количество углеродных единиц"
   const carbonData = {
     labels: years.map(String),
-    datasets: [{
-      label: 'Углеродные единицы, т',
-       results.carbonUnits, // ← ИМЯ СВОЙСТВА ОБЯЗАТЕЛЬНО
-      borderColor: '#1976d2',
-      backgroundColor: 'rgba(25, 118, 210, 0.1)',
-      stepped: 'before',
-      fill: true,
-      tension: 0
-    }]
+    datasets: [
+      {
+        label: 'Углеродные единицы, т',
+        // ⚠️ ВАЖНО: результат из calculateProject → carbonUnits
+         results.carbonUnits,
+        borderColor: '#1976d2',
+        backgroundColor: 'rgba(25, 118, 210, 0.1)',
+        stepped: 'before',
+        fill: true,
+        tension: 0,
+      },
+    ],
   };
 
-  // ✅ 2. НАКОПЛЕННЫЙ ДЕНЕЖНЫЙ ПОТОК
+  // ✅ 2. Накопленный денежный поток
   const cumulativeCashFlow = results.cashFlows.reduce((arr, cf, i) => {
     arr[i] = (arr[i - 1] || 0) + cf;
     return arr;
   }, []);
 
-  // ✅ 3. ДЕНЕЖНЫЕ ПОТОКИ — тоже с  [...]
+  // ✅ 3. График денежных потоков
   const cashFlowData = {
     labels: years.map(String),
     datasets: [
       {
         type: 'bar',
         label: 'Чистый ДП',
-         results.cashFlows, // ←  [...]
-        backgroundColor: (ctx) => ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 0.7)' : 'rgba(244, 67, 54, 0.7)',
-        borderColor: (ctx) => ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)',
-        borderWidth: 1
+         results.cashFlows,
+        backgroundColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 0.7)' : 'rgba(244, 67, 54, 0.7)'),
+        borderColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)'),
+        borderWidth: 1,
       },
       {
         type: 'line',
         label: 'Накопленный ДП',
-         cumulativeCashFlow, // ←  [...]
+         cumulativeCashFlow,
         borderColor: '#673ab7',
         backgroundColor: 'transparent',
         borderWidth: 2,
         fill: false,
-        tension: 0.2
-      }
-    ]
+        tension: 0.2,
+      },
+    ],
   };
 
   const options = {
@@ -60,35 +89,67 @@ export default function ResultsSection({ results, inputs }) {
       legend: { position: 'top' },
       tooltip: {
         callbacks: {
-          label: (ctx) => {
+          label: function (ctx) {
             const value = ctx.parsed.y;
             const unit = ctx.dataset.label.includes('единиц') ? 'т' : '₽';
             return `${ctx.dataset.label}: ${value.toLocaleString()} ${unit}`;
-          }
-        }
-      }
+          },
+        },
+      },
     },
     scales: {
-      x: { ticks: { callback: (_, i) => yearLabels[i] } }
-    }
+      x: {
+        ticks: {
+          callback: (_, i) => yearLabels[i],
+        },
+      },
+    },
   };
 
   return (
     <div style={{ marginTop: '30px' }}>
       <h3>Результаты расчёта</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-        {results.financials && Object.entries(results.financials).map(([key, value]) => (
-          <div key={key} style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
-            <strong>
-              {key === 'npv' ? 'NPV' :
-               key === 'irr' ? 'IRR' :
-               key === 'cuCost' ? 'Себестоимость УЕ' : key}
-            </strong><br />
-            {value}
-          </div>
-        ))}
+
+      {/* Сводка финансовых показателей */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: '12px',
+          marginBottom: '20px',
+        }}
+      >
+        {results.financials &&
+          Object.entries(results.financials).map(([key, value]) => (
+            <div
+              key={key}
+              style={{
+                padding: '10px',
+                border: '1px solid #ddd',
+                textAlign: 'center',
+                backgroundColor: '#fafafa',
+              }}
+            >
+              <strong>
+                {key === 'npv'
+                  ? 'NPV'
+                  : key === 'irr'
+                  ? 'IRR'
+                  : key === 'cuCost'
+                  ? 'Себестоимость УЕ'
+                  : key === 'simplePayback'
+                  ? 'Срок окупаемости'
+                  : key === 'discountedPayback'
+                  ? 'Диск. срок окупаемости'
+                  : key}
+              </strong>
+              <br />
+              {value}
+            </div>
+          ))}
       </div>
 
+      {/* Графики */}
       <h4>Динамика углеродных единиц</h4>
       <div style={{ height: '350px' }}>
         <Line data={carbonData} options={options} />
