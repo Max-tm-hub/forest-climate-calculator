@@ -1,26 +1,9 @@
 // src/utils/calculator.js
-import { getCarbonUnits } from '../data/co2Increment';
-
-export function calculateIRR(cashFlows, guess = 0.1) {
-  const maxIter = 100;
-  const tol = 1e-6;
-  let rate = guess;
-  for (let i = 0; i < maxIter; i++) {
-    let npv = 0, dNpv = 0;
-    for (let t = 0; t < cashFlows.length; t++) {
-      npv += cashFlows[t] / Math.pow(1 + rate, t);
-      dNpv -= t * cashFlows[t] / Math.pow(1 + rate, t + 1);
-    }
-    const newRate = rate - npv / dNpv;
-    if (Math.abs(newRate - rate) < tol) return newRate;
-    rate = newRate;
-  }
-  return NaN;
-}
+import { CARBON_INCREMENT } from '../data/co2Increment';
 
 export function calculateProject(params) {
   const {
-    treeType, areaHa, projectYears = 40,
+    treeType, areaHa = 500, projectYears = 40,
     discountRate = 0.23, inflation = 0.025,
     landPrice = 500000,
     prepPerHa = 20000,
@@ -40,17 +23,21 @@ export function calculateProject(params) {
     profitTaxRate = 0.25
   } = params;
 
-  // ✅ Инвестиции (точно как в Excel)
-  const landAndPrep = 10_500_000; // ← Фиксировано по Excel
-  const seedlingsAndPlanting = 9_156_000; // ← Фиксировано по Excel
-  const machines = 10_000_000; // ← Фиксировано по Excel
-  const totalInvestment = landAndPrep + seedlingsAndPlanting + machines + designVerification; // 30.256 млн
-
-  const depreciableInvestment = totalInvestment - landAndPrep; // Земля не амортизируется
-  const annualDepreciation = depreciableInvestment / projectYears;
+  // ✅ Инвестиции как в Excel: 30.256 млн ₽
+  const landPrep = 10_500_000;
+  const seedlingsPlanting = 9_156_000;
+  const machines = 10_000_000;
+  const totalInvestment = landPrep + seedlingsPlanting + machines + designVerification;
+  const depreciable = totalInvestment - landPrep;
+  const annualDepreciation = depreciable / projectYears;
 
   const years = Array.from({ length: projectYears + 1 }, (_, i) => i);
   const inflationFactor = years.map(y => Math.pow(1 + inflation, y));
+  const increment = CARBON_INCREMENT[treeType];
+
+  if (!increment || increment.length < projectYears + 1) {
+    throw new Error(`Недостаточно данных для ${treeType} на ${projectYears} лет`);
+  }
 
   const carbonUnits = [];
   const revenues = [];
@@ -58,27 +45,23 @@ export function calculateProject(params) {
   const cashFlows = [];
   const discountedCashFlows = [];
 
-  let timberRevenue = 0;
-
   for (let y = 0; y <= projectYears; y++) {
-    // ✅ Ключевое исправление: берём УЕ напрямую из калиброванной таблицы
-    const cu = getCarbonUnits(treeType, areaHa, y);
+    // ✅ Ключ: углеродные единицы = прирост × площадь / 1000
+    const cu = (increment[y] * areaHa) / 1000;
     carbonUnits[y] = cu;
 
     // Выручка от УЕ
-    const revenueCarbon = y > 0 ? cu * carbonUnitPrice * inflationFactor[y] : 0;
+    const revCarbon = y > 0 ? cu * carbonUnitPrice * inflationFactor[y] : 0;
 
     // Древесина — только в последний год
-    let revenueTimber = 0;
+    let revTimber = 0;
     if (y === projectYears) {
-      const volume = timberVolumePerHa * areaHa;
-      const harvestCost = timberHarvestCost * volume;
-      const transportCost = transportCostPerKm * transportDistance * volume;
-      revenueTimber = volume * timberPrice * inflationFactor[y] - (harvestCost + transportCost) * inflationFactor[y];
-      timberRevenue = revenueTimber;
+      const vol = timberVolumePerHa * areaHa;
+      const harvestCost = timberHarvestCost * vol;
+      const transportCost = transportCostPerKm * transportDistance * vol;
+      revTimber = vol * timberPrice * inflationFactor[y] - (harvestCost + transportCost) * inflationFactor[y];
     }
-
-    const totalRevenue = revenueCarbon + revenueTimber;
+    const totalRevenue = revCarbon + revTimber;
     revenues[y] = totalRevenue;
 
     // Операционные расходы
@@ -117,20 +100,12 @@ export function calculateProject(params) {
   const discountedPayback = discountedCashFlows.findIndex((_, i) =>
     discountedCashFlows.slice(0, i + 1).reduce((s, x) => s + x, 0) >= 0
   );
-  const totalCarbonUnits = carbonUnits.reduce((a, b) => a + b, 0);
-  const totalCosts = Math.abs(cashFlows[0]) + opex.slice(1).reduce((a, b) => a - b, 0);
-  const cuCost = totalCarbonUnits > 0 ? totalCosts / totalCarbonUnits : Infinity;
-  const totalProfit = revenues.reduce((a, r) => a + r, 0) + opex.reduce((a, o) => a + o, 0) + cashFlows[0];
-  const roi = (totalProfit / totalInvestment) * 100;
-  const profitabilityIndex = (npv + totalInvestment) / totalInvestment;
+  const totalCU = carbonUnits.reduce((a, b) => a + b, 0);
+  const cuCost = totalCU > 0 ? Math.abs(cashFlows[0]) / totalCU : Infinity;
+  const roi = (npv / totalInvestment) * 100;
 
   return {
-    carbonUnits,
-    revenues,
-    opex,
-    cashFlows,
-    discountedCashFlows,
-    timberRevenue,
+    carbonUnits, revenues, opex, cashFlows, discountedCashFlows,
     financials: {
       npv: Math.round(npv),
       irr: isNaN(irr) ? '—' : (irr * 100).toFixed(2) + '%',
@@ -138,7 +113,23 @@ export function calculateProject(params) {
       discountedPayback: discountedPayback === -1 ? '—' : discountedPayback,
       cuCost: Math.round(cuCost),
       roi: Math.round(roi) + '%',
-      profitabilityIndex: parseFloat(profitabilityIndex.toFixed(3)),
+      profitabilityIndex: parseFloat((1 + npv / totalInvestment).toFixed(3))
     }
   };
+}
+
+function calculateIRR(cashFlows, guess = 0.1) {
+  const maxIter = 100, tol = 1e-6;
+  let rate = guess;
+  for (let i = 0; i < maxIter; i++) {
+    let npv = 0, dNpv = 0;
+    for (let t = 0; t < cashFlows.length; t++) {
+      npv += cashFlows[t] / Math.pow(1 + rate, t);
+      dNpv -= t * cashFlows[t] / Math.pow(1 + rate, t + 1);
+    }
+    const newRate = rate - npv / dNpv;
+    if (Math.abs(newRate - rate) < tol) return newRate;
+    rate = newRate;
+  }
+  return NaN;
 }
