@@ -1,54 +1,72 @@
-import React from 'react';
+// src/components/ResultsSection.jsx
+import React, { useRef } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend } from 'chart.js';
+import { Chart as ChartJS, /* ... */ } from 'chart.js';
+import zoomPlugin from 'chartjs-plugin-zoom';
+ChartJS.register(/* ... */, zoomPlugin);
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend);
+export default function ResultsSection({ resultsByScenario, inputs }) {
+  const years = Array.from({ length: inputs.projectYears + 1 }, (_, i) => i);
+  const yearLabels = years.map(y => y % 5 === 0 ? y : '');
 
-export default function ResultsSection({ results, inputs }) {
-  if (!results) return null;
-
-  const years = Array.from({ length: inputs.projectYears + 1 }, (_, i) => i.toString());
-
+  // График УЕ (step-line)
   const carbonData = {
-    labels: years,
-    datasets: [{ label: 'УЕ (т)', data: results.carbonUnits, borderColor: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.2)', tension: 0.4, fill: true }]
+    labels: years.map(String),
+    datasets: [{
+      label: 'УЕ (т)',
+       resultsByScenario.base.carbonUnits,
+      borderColor: '#1976d2',
+      stepped: 'before',
+      fill: true
+    }]
   };
 
-  const cashFlowData = {
-    labels: years,
-    datasets: [
-      { label: 'Чистый ДП (₽)', data: results.cashFlows, type: 'bar', backgroundColor: 'rgba(239, 83, 80, 0.6)' },
-      { label: 'Дисконтированный ДП (₽)', data: results.discountedCashFlows, type: 'line', borderColor: '#388e3c', backgroundColor: 'transparent', fill: false }
-    ]
+  // Сравнение NPV
+  const npvData = {
+    labels: ['Пессимистичный', 'Базовый', 'Оптимистичный'],
+    datasets: [{ label: 'NPV, ₽', data: [
+      resultsByScenario.pessimistic.npv,
+      resultsByScenario.base.npv,
+      resultsByScenario.optimistic.npv
+    ], backgroundColor: ['#f44336', '#2196f3', '#4caf50'] }]
   };
 
-  const options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } };
-
-  const metrics = Object.entries(results.financials).map(([key, value]) => (
-    <div key={key} style={{ border: '1px solid #e0e0e0', padding: '12px', borderRadius: '6px', textAlign: 'center', backgroundColor: '#f9f9f9' }}>
-      <div style={{ fontSize: '0.85em', opacity: 0.7 }}>{key === 'npv' ? 'NPV' : key === 'irr' ? 'IRR' : key === 'cuCost' ? 'Себестоимость УЕ' : key}</div>
-      <div style={{ fontWeight: 'bold', fontSize: '1.1em' }}>{value}</div>
-    </div>
-  ));
+  const options = {
+    responsive: true,
+    plugins: { legend: { position: 'top' }, zoom: { zoom: { wheel: { enabled: true } }, pan: { enabled: true } } },
+    scales: { x: { ticks: { callback: (_, i) => yearLabels[i] } } }
+  };
 
   return (
-    <div style={{ marginTop: '30px' }}>
+    <div>
       <h3>Результаты расчёта</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-        {metrics}
+
+      {/* Сводка */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+        <Metric label="NPV (баз.)" value={`${resultsByScenario.base.financials.npv.toLocaleString()} ₽`} />
+        <Metric label="IRR (баз.)" value={resultsByScenario.base.financials.irr} />
+        <Metric label="Себестоимость УЕ" value={`${resultsByScenario.base.financials.cuCost} ₽/т`} />
       </div>
 
-      <h4 style={{ marginTop: '30px' }}>Графики</h4>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', height: '400px' }}>
-        <div>
-          <h5>Количество углеродных единиц по годам</h5>
-          <Line data={carbonData} options={options} />
-        </div>
-        <div>
-          <h5>Денежные потоки</h5>
-          <Bar data={cashFlowData} options={options} />
-        </div>
+      {/* Графики */}
+      <h4>Динамика углеродных единиц</h4>
+      <div style={{ height: '350px' }}>
+        <Line data={carbonData} options={options} />
       </div>
+
+      <h4 style={{ marginTop: '30px' }}>Сравнение сценариев (NPV)</h4>
+      <div style={{ height: '300px' }}>
+        <Bar data={npvData} options={{ ...options, indexAxis: 'y' }} />
+      </div>
+    </div>
+  );
+}
+
+function Metric({ label, value }) {
+  return (
+    <div style={{ border: '1px solid #eee', padding: '12px', textAlign: 'center' }}>
+      <div><strong>{label}</strong></div>
+      <div>{value}</div>
     </div>
   );
 }
