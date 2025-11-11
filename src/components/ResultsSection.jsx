@@ -45,7 +45,7 @@ export default function ResultsSection({ results, inputs }) {
       {
         label: 'Углеродные единицы, т',
         // ⚠️ КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: явно указываем имя свойства `data`
-         results.carbonUnits, // ← строка 52:16 — была ошибка
+         results.carbonUnits,data: // ← строка 52:16 — была ошибка
         borderColor: '#1976d2',
         backgroundColor: 'rgba(25, 118, 210, 0.1)',
         stepped: 'before',
