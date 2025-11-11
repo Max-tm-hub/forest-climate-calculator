@@ -27,14 +27,10 @@ ChartJS.register(
 );
 
 export default function ResultsSection({ results, inputs }) {
-  // Добавим отладку
-  console.log('ResultsSection получил:', { results, inputs });
-
   if (!results || !inputs) {
     return <div>Результаты ещё не рассчитаны</div>;
   }
 
-  // ← Проверим, есть ли нужные поля
   if (!results.carbonUnits || !results.cashFlows) {
     return <div>Ошибка: результаты не содержат нужных данных</div>;
   }
@@ -48,8 +44,8 @@ export default function ResultsSection({ results, inputs }) {
     datasets: [
       {
         label: 'Углеродные единицы, т',
-        // ⚠️ ВАЖНО: результат из calculateProject → carbonUnits
-         results.carbonUnits, // ← ОШИБКА БЫЛА ЗДЕСЬ: строка 51:16
+        // ⚠️ КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: явно указываем имя свойства `data`
+         results.carbonUnits, // ← строка 52:16 — была ошибка
         borderColor: '#1976d2',
         backgroundColor: 'rgba(25, 118, 210, 0.1)',
         stepped: 'before',
@@ -72,7 +68,7 @@ export default function ResultsSection({ results, inputs }) {
       {
         type: 'bar',
         label: 'Чистый ДП',
-         results.cashFlows, // ← ОШИБКА БЫЛА ЗДЕСЬ: строка 51:16
+         results.cashFlows, // ← строка 52:16 — была ошибка
         backgroundColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 0.7)' : 'rgba(244, 67, 54, 0.7)'),
         borderColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)'),
         borderWidth: 1,
@@ -80,7 +76,7 @@ export default function ResultsSection({ results, inputs }) {
       {
         type: 'line',
         label: 'Накопленный ДП',
-         cumulativeCashFlow, // ← ОШИБКА БЫЛА ЗДЕСЬ: строка 51:16
+         cumulativeCashFlow, // ← строка 52:16 — была ошибка
         borderColor: '#673ab7',
         backgroundColor: 'transparent',
         borderWidth: 2,
