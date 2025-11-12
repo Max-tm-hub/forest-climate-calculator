@@ -28,6 +28,16 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
   const cashFlowChartRef = useRef();
   const carbonChartRef = useRef();
 
+  // useEffect должен быть объявлен ДО любого условного рендеринга
+  useEffect(() => {
+    if (results && onChartsReady && cashFlowChartRef.current && carbonChartRef.current) {
+      onChartsReady({
+        cashFlowChart: cashFlowChartRef.current,
+        carbonChart: carbonChartRef.current
+      });
+    }
+  }, [onChartsReady, results]);
+
   if (!results) return null;
 
   // Оптимизация: показываем только ключевые годы
@@ -319,16 +329,6 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     { key: 'roi', label: 'ROI', value: results.financials.roi },
     { key: 'profitabilityIndex', label: 'Индекс доходности', value: results.financials.profitabilityIndex }
   ];
-
-  // useEffect должен быть объявлен ДО любого условного рендеринга
-  useEffect(() => {
-    if (onChartsReady && cashFlowChartRef.current && carbonChartRef.current) {
-      onChartsReady({
-        cashFlowChart: cashFlowChartRef.current,
-        carbonChart: carbonChartRef.current
-      });
-    }
-  }, [onChartsReady, results]);
 
   return (
     <div style={{ marginTop: '20px' }}>
