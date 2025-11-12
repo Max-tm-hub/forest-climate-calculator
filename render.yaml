@@ -6,11 +6,11 @@ services:
     staticPublishPath: ./build
     envVars:
       - key: NODE_VERSION
-        value: 18
+        value: 18.18.0
     headers:
       - path: /*
         name: Cache-Control
-        value: no-cache
+        value: public, max-age=3600
     routes:
       - type: rewrite
         source: /*
