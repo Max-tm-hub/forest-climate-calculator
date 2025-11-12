@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { 
   Chart as ChartJS, 
@@ -23,8 +23,12 @@ ChartJS.register(
   Legend
 );
 
-export default function ResultsSection({ results, inputs }) {
+export default function ResultsSection({ results, inputs, onChartsReady }) {
   if (!results) return null;
+
+  // Refs для графиков
+  const cashFlowChartRef = useRef();
+  const carbonChartRef = useRef();
 
   // Оптимизация: показываем только ключевые годы
   const getOptimizedYears = () => {
@@ -316,6 +320,16 @@ export default function ResultsSection({ results, inputs }) {
     { key: 'profitabilityIndex', label: 'Индекс доходности', value: results.financials.profitabilityIndex }
   ];
 
+  // Передаем ссылки на графики родительскому компоненту
+  React.useEffect(() => {
+    if (onChartsReady && cashFlowChartRef.current && carbonChartRef.current) {
+      onChartsReady({
+        cashFlowChart: cashFlowChartRef.current,
+        carbonChart: carbonChartRef.current
+      });
+    }
+  }, [onChartsReady, results]);
+
   return (
     <div style={{ marginTop: '20px' }}>
       <h3 style={{ color: '#2e7d32', marginBottom: '15px', fontSize: '1.3em' }}>Результаты расчёта</h3>
@@ -367,7 +381,9 @@ export default function ResultsSection({ results, inputs }) {
           }}>
             Денежные потоки
           </h5>
-          <Bar data={cashFlowData} options={cashFlowChartOptions} />
+          <div ref={cashFlowChartRef}>
+            <Bar data={cashFlowData} options={cashFlowChartOptions} />
+          </div>
         </div>
 
         {/* График углеродных единиц */}
@@ -387,7 +403,9 @@ export default function ResultsSection({ results, inputs }) {
           }}>
             Накопленные углеродные единицы
           </h5>
-          <Line data={carbonData} options={carbonChartOptions} />
+          <div ref={carbonChartRef}>
+            <Line data={carbonData} options={carbonChartOptions} />
+          </div>
         </div>
       </div>
 
