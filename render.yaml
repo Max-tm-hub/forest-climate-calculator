@@ -6,7 +6,9 @@ services:
     staticPublishPath: ./build
     envVars:
       - key: NODE_VERSION
-        value: 18.18.0
+        value: 18.20.4
+      - key: GENERATE_SOURCEMAP
+        value: false
     headers:
       - path: /*
         name: Cache-Control
