@@ -400,4 +400,12 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
         textAlign: 'center',
         padding: '8px',
         backgroundColor: '#f8f9fa',
-        borderRadius
+        borderRadius: '4px',
+        border: '1px solid #e9ecef'
+      }}>
+        💡 <strong>Данные нормализованы для лучшего отображения:</strong><br/>
+        Денежные потоки показаны в миллионах рублей, углеродные единицы - в тысячах тонн
+      </div>
+    </div>
+  );
+}
