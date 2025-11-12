@@ -31,34 +31,51 @@ export default function ResultsSection({ results, inputs }) {
     const totalYears = inputs.projectYears + 1;
     
     if (totalYears <= 20) {
-      // Для коротких проектов показываем все годы
       return Array.from({ length: totalYears }, (_, i) => i);
-    } else if (totalYears <= 50) {
-      // Для средних проектов - каждый 2-5 год
-      const step = Math.max(2, Math.floor(totalYears / 15));
-      return Array.from({ length: totalYears }, (_, i) => i)
-        .filter((_, i) => i % step === 0 || i === 0 || i === totalYears - 1);
     } else {
-      // Для длинных проектов - ключевые точки + начало/конец
       const keyPoints = [0, 1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80];
       return keyPoints.filter(year => year <= inputs.projectYears)
         .concat(inputs.projectYears)
-        .filter((year, index, array) => array.indexOf(year) === index) // Уникальные значения
+        .filter((year, index, array) => array.indexOf(year) === index)
         .sort((a, b) => a - b);
     }
   };
 
   const optimizedYears = getOptimizedYears();
-  
-  // Данные для графика углеродных единиц
+
+  // Функция для нормализации данных (приведение к тысячам/миллионам)
+  const normalizeData = (data, divisor = 1000) => {
+    return data.map(value => value / divisor);
+  };
+
+  // Получаем максимальное и минимальное значения для настройки масштаба
+  const getYAxisBounds = (data) => {
+    const values = data.filter(val => val !== null && val !== undefined);
+    if (values.length === 0) return { min: 0, max: 100 };
+    
+    const maxVal = Math.max(...values);
+    const minVal = Math.min(...values);
+    
+    // Добавляем 10% от диапазона для отступов
+    const range = maxVal - minVal;
+    const padding = range * 0.1;
+    
+    return {
+      min: minVal - padding,
+      max: maxVal + padding
+    };
+  };
+
+  // Данные для графика углеродных единиц (в тысячах тонн)
+  const carbonDataValues = optimizedYears.map(i => {
+    return results.carbonUnits.slice(0, i + 1).reduce((sum, value) => sum + value, 0) / 1000;
+  });
+
   const carbonData = {
     labels: optimizedYears.map(y => y.toString()),
     datasets: [{
-      label: 'Накопленные УЕ (т CO₂)',
-      data: optimizedYears.map(i => {
-        // Рассчитываем накопленные УЕ до этого года
-        return results.carbonUnits.slice(0, i + 1).reduce((sum, value) => sum + value, 0);
-      }),
+      label: 'Накопленные УЕ (тыс. т CO₂)',
+      data: carbonDataValues,
       borderColor: '#2e7d32',
       backgroundColor: 'rgba(46, 125, 50, 0.1)',
       tension: 0.3,
@@ -71,21 +88,24 @@ export default function ResultsSection({ results, inputs }) {
     }]
   };
 
-  // Данные для графика денежных потоков (в тыс. рублей)
+  // Данные для графика денежных потоков (в миллионах рублей)
+  const cashFlowValues = normalizeData(optimizedYears.map(i => results.cashFlows[i]), 1000000);
+  const discountedFlowValues = normalizeData(optimizedYears.map(i => results.discountedCashFlows[i]), 1000000);
+
   const cashFlowData = {
     labels: optimizedYears.map(y => y.toString()),
     datasets: [
       {
-        label: 'Чистый ДП (тыс. ₽)',
-        data: optimizedYears.map(i => results.cashFlows[i] / 1000),
+        label: 'Чистый ДП (млн ₽)',
+        data: cashFlowValues,
         backgroundColor: 'rgba(25, 118, 210, 0.7)',
         order: 2,
         barPercentage: 0.6,
         categoryPercentage: 0.8
       },
       {
-        label: 'Дисконтированный ДП (тыс. ₽)',
-        data: optimizedYears.map(i => results.discountedCashFlows[i] / 1000),
+        label: 'Дисконтированный ДП (млн ₽)',
+        data: discountedFlowValues,
         borderColor: '#d32f2f',
         backgroundColor: 'transparent',
         type: 'line',
@@ -100,8 +120,12 @@ export default function ResultsSection({ results, inputs }) {
     ]
   };
 
-  // Компактные настройки графиков
-  const compactChartOptions = {
+  // Получаем границы для осей Y
+  const cashFlowBounds = getYAxisBounds([...cashFlowValues, ...discountedFlowValues]);
+  const carbonBounds = getYAxisBounds(carbonDataValues);
+
+  // Настройки для графика денежных потоков
+  const cashFlowChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -109,23 +133,23 @@ export default function ResultsSection({ results, inputs }) {
         position: 'top',
         labels: {
           usePointStyle: true,
-          padding: 10,
+          padding: 8,
           font: {
             size: 11
           },
-          boxWidth: 12
+          boxWidth: 10
         }
       },
       tooltip: {
         mode: 'index',
         intersect: false,
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        padding: 8,
+        padding: 6,
         titleFont: {
-          size: 11
+          size: 10
         },
         bodyFont: {
-          size: 11
+          size: 10
         },
         displayColors: true,
         callbacks: {
@@ -135,7 +159,7 @@ export default function ResultsSection({ results, inputs }) {
               label += ': ';
             }
             if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat('ru-RU').format(context.parsed.y.toFixed(0));
+              label += context.parsed.y.toFixed(2) + ' млн ₽';
             }
             return label;
           }
@@ -150,8 +174,7 @@ export default function ResultsSection({ results, inputs }) {
           font: {
             size: 11,
             weight: 'bold'
-          },
-          padding: { top: 5, bottom: 5 }
+          }
         },
         grid: {
           display: false
@@ -160,29 +183,27 @@ export default function ResultsSection({ results, inputs }) {
           maxRotation: 45,
           minRotation: 0,
           font: {
-            size: 10
-          },
-          padding: 2
+            size: 9
+          }
         }
       },
       y: {
         title: {
           display: true,
-          text: 'Тыс. рублей / Тонны CO₂',
+          text: 'Млн рублей',
           font: {
             size: 11,
             weight: 'bold'
-          },
-          padding: { top: 5, bottom: 5 }
+          }
         },
-        beginAtZero: true,
+        min: cashFlowBounds.min,
+        max: cashFlowBounds.max,
         ticks: {
           font: {
-            size: 10
+            size: 9
           },
-          padding: 2,
           callback: function(value) {
-            return new Intl.NumberFormat('ru-RU').format(value);
+            return value.toFixed(1) + 'M';
           }
         },
         grid: {
@@ -194,16 +215,99 @@ export default function ResultsSection({ results, inputs }) {
       mode: 'nearest',
       axis: 'x',
       intersect: false
+    }
+  };
+
+  // Настройки для графика углеродных единиц
+  const carbonChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 8,
+          font: {
+            size: 11
+          },
+          boxWidth: 10
+        }
+      },
+      tooltip: {
+        mode: 'nearest',
+        intersect: true,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 6,
+        titleFont: {
+          size: 10
+        },
+        bodyFont: {
+          size: 10
+        },
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.parsed.y !== null) {
+              label += context.parsed.y.toFixed(1) + ' тыс. т';
+            }
+            return label;
+          }
+        }
+      }
     },
-    elements: {
-      point: {
-        hoverRadius: 5
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Год проекта',
+          font: {
+            size: 11,
+            weight: 'bold'
+          }
+        },
+        grid: {
+          display: false
+        },
+        ticks: {
+          maxRotation: 45,
+          minRotation: 0,
+          font: {
+            size: 9
+          }
+        }
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Тыс. тонн CO₂',
+          font: {
+            size: 11,
+            weight: 'bold'
+          }
+        },
+        min: carbonBounds.min,
+        max: carbonBounds.max,
+        ticks: {
+          font: {
+            size: 9
+          },
+          callback: function(value) {
+            return value.toFixed(0) + 'K';
+          }
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)'
+        }
       }
     }
   };
 
   const metrics = [
-    { key: 'npv', label: 'NPV', value: `${results.financials.npv.toLocaleString('ru-RU')} ₽` },
+    { key: 'npv', label: 'NPV', value: `${(results.financials.npv / 1000000).toFixed(1)} млн ₽` },
     { key: 'irr', label: 'IRR', value: results.financials.irr },
     { key: 'simplePayback', label: 'Срок окупаемости', value: `${results.financials.simplePayback} лет` },
     { key: 'discountedPayback', label: 'Диск. срок окупаемости', value: `${results.financials.discountedPayback} лет` },
@@ -219,87 +323,86 @@ export default function ResultsSection({ results, inputs }) {
       {/* Компактная сетка показателей */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
-        gap: '10px', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
+        gap: '8px', 
         marginBottom: '20px' 
       }}>
         {metrics.map(({ key, label, value }) => (
           <div key={key} style={{ 
             border: '1px solid #e0e0e0', 
-            padding: '12px', 
+            padding: '10px 8px', 
             borderRadius: '6px', 
             textAlign: 'center', 
             backgroundColor: '#f8f9fa',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
           }}>
-            <div style={{ fontSize: '0.8em', opacity: 0.7, marginBottom: '6px', fontWeight: '500' }}>{label}</div>
-            <div style={{ fontWeight: 'bold', fontSize: '0.95em', color: '#1976d2' }}>{value}</div>
+            <div style={{ fontSize: '0.75em', opacity: 0.7, marginBottom: '4px', fontWeight: '500' }}>{label}</div>
+            <div style={{ fontWeight: 'bold', fontSize: '0.85em', color: '#1976d2' }}>{value}</div>
           </div>
         ))}
       </div>
 
-      {/* Компактные графики */}
+      {/* Компактные графики в одной колонке */}
       <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr', 
-        gap: '20px', 
-        marginBottom: '20px'
+        display: 'flex', 
+        flexDirection: 'column',
+        gap: '15px', 
+        marginBottom: '15px'
       }}>
         
         {/* График денежных потоков */}
         <div style={{ 
           backgroundColor: 'white', 
-          padding: '15px', 
-          borderRadius: '8px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-          height: '350px'
+          padding: '12px', 
+          borderRadius: '6px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+          height: '300px'
         }}>
           <h5 style={{ 
             textAlign: 'center', 
-            marginBottom: '12px', 
+            margin: '0 0 10px 0', 
             color: '#1976d2',
-            fontSize: '1em',
+            fontSize: '0.9em',
             fontWeight: '600'
           }}>
-            Денежные потоки (тыс. рублей)
+            Денежные потоки
           </h5>
-          <Bar data={cashFlowData} options={compactChartOptions} />
+          <Bar data={cashFlowData} options={cashFlowChartOptions} />
         </div>
 
         {/* График углеродных единиц */}
         <div style={{ 
           backgroundColor: 'white', 
-          padding: '15px', 
-          borderRadius: '8px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-          height: '350px'
+          padding: '12px', 
+          borderRadius: '6px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+          height: '300px'
         }}>
           <h5 style={{ 
             textAlign: 'center', 
-            marginBottom: '12px', 
+            margin: '0 0 10px 0', 
             color: '#2e7d32',
-            fontSize: '1em',
+            fontSize: '0.9em',
             fontWeight: '600'
           }}>
             Накопленные углеродные единицы
           </h5>
-          <Line data={carbonData} options={compactChartOptions} />
+          <Line data={carbonData} options={carbonChartOptions} />
         </div>
       </div>
 
-      {/* Информация о данных */}
+      {/* Информация о масштабировании */}
       <div style={{
-        fontSize: '0.8em',
+        fontSize: '0.7em',
         color: '#666',
         textAlign: 'center',
-        padding: '10px',
-        borderTop: '1px solid #e0e0e0',
-        marginTop: '10px'
+        padding: '8px',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '4px',
+        border: '1px solid #e9ecef'
       }}>
-        Показаны ключевые точки данных для лучшей читаемости. Полные данные доступны в экспорте Excel.
-        {optimizedYears.length < inputs.projectYears + 1 && (
-          <span> Отображено {optimizedYears.length} из {inputs.projectYears + 1} лет.</span>
-        )}
+        💡 <strong>Данные нормализованы для лучшего отображения:</strong><br/>
+        Денежные потоки показаны в миллионах рублей, углеродные единицы - в тысячах тонн
       </div>
     </div>
   );
