@@ -1,5 +1,3 @@
-[file name]: exportToPdf.js
-[file content begin]
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
@@ -326,4 +324,3 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
     alert('Ошибка при создании PDF. Пожалуйста, попробуйте экспорт в Excel.');
   }
 }
-[file content end]
