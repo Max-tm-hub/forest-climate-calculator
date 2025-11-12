@@ -317,6 +317,3 @@ function generateConclusion(results, inputs) {
   
   return conclusion;
 }
-
-// Экспорт обеих функций
-export { exportGostReport };
