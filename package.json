@@ -29,5 +29,9 @@
   "engines": {
     "node": "18.x",
     "npm": ">=8.0.0"
-  }
+  },
+  "homepage": ".",
+  "description": "Калькулятор лесных климатических проектов с расчетом поглощения CO₂ и экономической эффективности",
+  "keywords": ["forest", "climate", "calculator", "carbon", "co2", "react"],
+  "author": "Forest Climate Team"
 }
