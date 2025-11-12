@@ -1,4 +1,3 @@
-// src/utils/pdfRenderer.js
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -205,7 +204,7 @@ async function addChartToPDF(pdf, chartRef, title, x, y, width, height) {
       
       const imageData = offScreenCanvas.toDataURL('image/png', 1.0);
       
-      // Добавляем заголовок как изображение (чтобы избежать проблем со шрифтами)
+      // Добавляем заголовок
       pdf.setFontSize(12);
       pdf.text(title, x + width / 2, y - 5, { align: 'center' });
       
