@@ -12,8 +12,14 @@ export default function ExportButtons({ results, inputs, chartRefs }) {
   };
 
   const handleExportPdf = () => {
+    console.log('Export PDF clicked, chart refs:', chartRefs);
+    
     if (results && chartRefs) {
-      exportToPdfWithCanvas(results, inputs, chartRefs);
+      if (chartRefs.cashFlowChart || chartRefs.carbonChart) {
+        exportToPdfWithCanvas(results, inputs, chartRefs);
+      } else {
+        alert('Графики не готовы для экспорта. Пожалуйста, подождите немного и попробуйте снова.');
+      }
     } else {
       alert('Нет данных для экспорта');
     }
