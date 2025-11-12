@@ -1,68 +1,75 @@
-// src/App.jsx
 import React, { useState } from 'react';
-import { calculateProject } from './utils/calculator';
-import { exportGostReport } from './utils/exportToPdf';
+import CalculatorForm from './components/CalculatorForm';
 import ResultsSection from './components/ResultsSection';
+import ExportButtons from './components/ExportButtons';
+import { calculateProject } from './utils/calculator';
+import { exportToExcel } from './utils/exportToExcel';
+import { exportToPdf } from './utils/exportToPdf';
 
-const SCENARIOS = {
-  pessimistic: { co2Factor: 0.8, carbonPrice: 800, timberPrice: 1500, inflation: 0.04, discountRate: 0.28 },
-  base: { co2Factor: 1.0, carbonPrice: 1100, timberPrice: 1900, inflation: 0.025, discountRate: 0.23 },
-  optimistic: { co2Factor: 1.2, carbonPrice: 1500, timberPrice: 2300, inflation: 0.015, discountRate: 0.18 }
-};
-
-export default function App() {
+function App() {
   const [inputs, setInputs] = useState({
     treeType: 'Смешанный лес',
     areaHa: 500,
-    projectYears: 40
+    projectYears: 80,
+    discountRate: 0.23,
+    inflation: 0.025,
+    landPrice: 500000,
+    prepPerHa: 20000,
+    seedlingsPerHa: 1300,
+    seedlingCost: 120,
+    plantingCostPerHa: 10000,
+    pestsInitialPerHa: 8000,
+    equipmentPerHa: 20000,
+    designVerification: 600000,
+    weedingCostPerHa: 5000,
+    weedingFreq: 2,
+    pruningCostPerHa: 1000,
+    pruningFreq: 1,
+    thinningCostPerHa: 120000,
+    carbonUnitPrice: 1100,
+    timberPrice: 1900,
+    timberVolumePerHa: 200,
+    timberHarvestCost: 50,
+    transportCostPerKm: 10,
+    transportDistance: 50,
+    profitTaxRate: 0.25
   });
 
-  const [resultsByScenario, setResults] = useState(null);
+  const [results, setResults] = useState(null);
 
-  const handleCalculate = () => {
-    const results = {};
-    for (const [key, params] of Object.entries(SCENARIOS)) {
-      const res = calculateProject({
-        ...inputs,
-        carbonUnitPrice: params.carbonPrice,
-        timberPrice: params.timberPrice,
-        inflation: params.inflation,
-        discountRate: params.discountRate
-        // co2Factor можно ввести в calculator.js при необходимости
-      });
-      results[key] = res;
-    }
-    setResults(results);
+  const handleInputChange = (name, value) => {
+    setInputs(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    try {
+      const res = calculateProject(inputs);
+      setResults(res);
+    } catch (err) {
+      alert('Ошибка расчёта: ' + err.message);
+    }
+  };
+
+  const handleExportExcel = () => exportToExcel(results, inputs);
+  const handleExportPdf = () => exportToPdf(results, inputs);
+
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1>🌱 Калькулятор лесных климатических проектов</h1>
+    <div style={{ fontFamily: 'Segoe UI, sans-serif', maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+      <header style={{ textAlign: 'center', marginBottom: '30px' }}>
+        <h1>🌱 Калькулятор лесных климатических проектов</h1>
+        <p>Расчёт поглощения CO₂ и экономической эффективности лесного проекта</p>
+      </header>
 
-      <div style={{ marginBottom: '20px' }}>
-        <label>Порода: </label>
-        <select value={inputs.treeType} onChange={e => setInputs({...inputs, treeType: e.target.value})}>
-          {['Смешанный лес', 'Лиственница', 'Сосна', 'Пихта Дугласа', 'Пихта', 'Ель', 'Дуб', 'Бук'].map(t => 
-            <option key={t} value={t}>{t}</option>
-          )}
-        </select>
-        <label> Площадь (га): </label>
-        <input type="number" value={inputs.areaHa} onChange={e => setInputs({...inputs, areaHa: +e.target.value})} />
-        <label> Срок (лет): </label>
-        <input type="number" value={inputs.projectYears} onChange={e => setInputs({...inputs, projectYears: +e.target.value})} min="1" max="80" />
-        <button onClick={handleCalculate} style={{ marginLeft: '10px', padding: '6px 12px', backgroundColor: '#1976d2', color: 'white' }}>
-          Рассчитать
-        </button>
-      </div>
-
-      {resultsByScenario && (
+      <CalculatorForm inputs={inputs} onInputChange={handleInputChange} onSubmit={handleSubmit} />
+      {results && (
         <>
-          <ResultsSection resultsByScenario={resultsByScenario} inputs={inputs} />
-          <button onClick={() => exportGostReport(resultsByScenario, inputs)} style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#607d8b', color: 'white' }}>
-            📄 Скачать отчёт по ГОСТ
-          </button>
+          <ResultsSection results={results} inputs={inputs} />
+          <ExportButtons onExportExcel={handleExportExcel} onExportPdf={handleExportPdf} />
         </>
       )}
     </div>
   );
 }
+
+export default App;
