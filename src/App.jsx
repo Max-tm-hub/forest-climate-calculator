@@ -3,8 +3,6 @@ import CalculatorForm from './components/CalculatorForm';
 import ResultsSection from './components/ResultsSection';
 import ExportButtons from './components/ExportButtons';
 import { calculateProject } from './utils/calculator';
-import { exportToExcel } from './utils/exportToExcel';
-import { exportToPdf } from './utils/exportToPdf';
 
 function App() {
   const [inputs, setInputs] = useState({
@@ -52,29 +50,23 @@ function App() {
     }
   };
 
-  const handleExportExcel = () => exportToExcel(results, inputs);
-  
   const handleChartsReady = (refs) => {
     setChartRefs(refs);
-  };
-
-  const handleExportPdf = () => {
-    if (results && chartRefs.cashFlowChart && chartRefs.carbonChart) {
-      exportToPdf(results, inputs, chartRefs);
-    } else {
-      // Если графики не готовы, экспортируем без них
-      exportToPdf(results, inputs, {});
-    }
   };
 
   return (
     <div style={{ fontFamily: 'Segoe UI, sans-serif', maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
       <header style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h1>🌱 Калькулятор лесных климатических проектов</h1>
-        <p>Расчёт поглощения CO₂ и экономической эффективности лесного проекта</p>
+        <h1 style={{ color: '#2e7d32', marginBottom: '10px' }}>🌱 Калькулятор лесных климатических проектов</h1>
+        <p style={{ color: '#666', fontSize: '16px' }}>Расчёт поглощения CO₂ и экономической эффективности лесного проекта</p>
       </header>
 
-      <CalculatorForm inputs={inputs} onInputChange={handleInputChange} onSubmit={handleSubmit} />
+      <CalculatorForm 
+        inputs={inputs} 
+        onInputChange={handleInputChange} 
+        onSubmit={handleSubmit} 
+      />
+      
       {results && (
         <>
           <ResultsSection 
@@ -83,8 +75,9 @@ function App() {
             onChartsReady={handleChartsReady}
           />
           <ExportButtons 
-            onExportExcel={handleExportExcel} 
-            onExportPdf={handleExportPdf} 
+            results={results}
+            inputs={inputs}
+            chartRefs={chartRefs}
           />
         </>
       )}
