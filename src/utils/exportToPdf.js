@@ -160,7 +160,7 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
     
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('3. ГРАФИЧЕСКАЯ ВИЗУАЛИЗАЦИА', 20, currentY);
+    doc.text('3. ГРАФИЧЕСКАЯ ВИЗУАЛИЗАЦИЯ', 20, currentY);
     currentY += 15;
     
     let chartsAdded = false;
