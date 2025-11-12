@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { 
   Chart as ChartJS, 
@@ -24,11 +24,11 @@ ChartJS.register(
 );
 
 export default function ResultsSection({ results, inputs, onChartsReady }) {
-  if (!results) return null;
-
-  // Refs для графиков
+  // Refs для графиков должны быть объявлены ДО любого условного рендеринга
   const cashFlowChartRef = useRef();
   const carbonChartRef = useRef();
+
+  if (!results) return null;
 
   // Оптимизация: показываем только ключевые годы
   const getOptimizedYears = () => {
@@ -320,8 +320,8 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     { key: 'profitabilityIndex', label: 'Индекс доходности', value: results.financials.profitabilityIndex }
   ];
 
-  // Передаем ссылки на графики родительскому компоненту
-  React.useEffect(() => {
+  // useEffect должен быть объявлен ДО любого условного рендеринга
+  useEffect(() => {
     if (onChartsReady && cashFlowChartRef.current && carbonChartRef.current) {
       onChartsReady({
         cashFlowChart: cashFlowChartRef.current,
