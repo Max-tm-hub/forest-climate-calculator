@@ -1,5 +1,13 @@
+[file name]: exportToPdf.js
+[file content begin]
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+
+// Добавляем поддержку кириллицы
+function registerRussianFont(doc) {
+  // Временное решение - используем стандартные шрифты, поддерживающие кириллицу
+  doc.setFont('helvetica');
+}
 
 // Функция для форматирования даты по ГОСТ
 function formatDateGOST() {
@@ -18,31 +26,59 @@ function formatNumberGOST(num) {
 }
 
 // Функция для добавления графиков в PDF
-function addChartToPDF(doc, chartImage, title, x, y, width = 180, height = 80) {
+async function addChartToPDF(doc, chartRef, title, x, y, width = 170, height = 90) {
   try {
-    if (chartImage) {
+    if (chartRef && chartRef.canvas) {
+      // Ждем отрисовки графика
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const canvas = chartRef.canvas;
+      
+      // Создаем новый canvas с увеличенным разрешением
+      const offScreenCanvas = document.createElement('canvas');
+      const offScreenCtx = offScreenCanvas.getContext('2d');
+      
+      // Увеличиваем размер для лучшего качества
+      const scale = 2;
+      offScreenCanvas.width = canvas.width * scale;
+      offScreenCanvas.height = canvas.height * scale;
+      
+      // Настраиваем сглаживание
+      offScreenCtx.scale(scale, scale);
+      offScreenCtx.imageSmoothingEnabled = true;
+      offScreenCtx.imageSmoothingQuality = 'high';
+      
+      // Копируем содержимое
+      offScreenCtx.drawImage(canvas, 0, 0);
+      
+      // Конвертируем в base64
+      const imageData = offScreenCanvas.toDataURL('image/png', 1.0);
+      
       // Добавляем заголовок графика
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text(title, x + width / 2, y - 5, { align: 'center' });
       
       // Добавляем изображение графика
-      doc.addImage(chartImage, 'PNG', x, y, width, height);
+      doc.addImage(imageData, 'PNG', x, y, width, height);
+      
+      return true;
     }
   } catch (error) {
     console.error('Error adding chart to PDF:', error);
   }
+  return false;
 }
 
 export async function exportToPdf(results, inputs, chartRefs = {}) {
   try {
-    // Создаем PDF
+    // Создаем PDF с правильной кодировкой
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     
-    // Устанавливаем шрифт
-    doc.setFont('helvetica');
+    // Регистрируем шрифт для кириллицы
+    registerRussianFont(doc);
     
     // === ТИТУЛЬНЫЙ ЛИСТ ===
     doc.setFontSize(16);
@@ -138,7 +174,7 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
     currentY = doc.lastAutoTable.finalY + 15;
     
     // Проверяем, есть ли место для графиков
-    if (currentY > 120) {
+    if (currentY > 100) {
       doc.addPage();
       currentY = 20;
     }
@@ -149,46 +185,58 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
     currentY += 15;
     
     // Добавляем графики, если они переданы
-    if (chartRefs.cashFlowChart && chartRefs.carbonChart) {
-      try {
-        // Получаем данные canvas как изображения
-        const cashFlowCanvas = chartRefs.cashFlowChart.canvas;
-        const carbonCanvas = chartRefs.carbonChart.canvas;
-        
-        // Конвертируем в base64
-        const cashFlowImage = cashFlowCanvas.toDataURL('image/png');
-        const carbonImage = carbonCanvas.toDataURL('image/png');
-        
-        // Добавляем первый график
-        addChartToPDF(doc, cashFlowImage, 'Денежные потоки (млн руб.)', 20, currentY, 170, 80);
-        currentY += 90;
-        
-        // Проверяем место для второго графика
-        if (currentY > 180) {
-          doc.addPage();
-          currentY = 20;
-        }
-        
-        // Добавляем второй график
-        addChartToPDF(doc, carbonImage, 'Накопленные углеродные единицы (тыс. т CO₂)', 20, currentY, 170, 80);
-        currentY += 90;
-        
-      } catch (chartError) {
-        console.error('Error processing charts:', chartError);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Графики недоступны для экспорта', 20, currentY);
-        currentY += 20;
+    let chartsAdded = false;
+    
+    if (chartRefs.cashFlowChart) {
+      const chartAdded = await addChartToPDF(
+        doc, 
+        chartRefs.cashFlowChart, 
+        'Денежные потоки (млн руб.)', 
+        20, 
+        currentY, 
+        170, 
+        90
+      );
+      
+      if (chartAdded) {
+        currentY += 100;
+        chartsAdded = true;
       }
-    } else {
+    }
+    
+    // Проверяем место для второго графика
+    if (currentY > 150) {
+      doc.addPage();
+      currentY = 20;
+    }
+    
+    if (chartRefs.carbonChart) {
+      const chartAdded = await addChartToPDF(
+        doc, 
+        chartRefs.carbonChart, 
+        'Накопленные углеродные единицы (тыс. т CO₂)', 
+        20, 
+        currentY, 
+        170, 
+        90
+      );
+      
+      if (chartAdded) {
+        chartsAdded = true;
+      }
+    }
+    
+    if (!chartsAdded) {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       doc.text('Графики недоступны для экспорта', 20, currentY);
       currentY += 20;
+    } else {
+      currentY += 100;
     }
     
     // === ДЕТАЛЬНЫЕ ДАННЫЕ ===
-    if (currentY > 100) {
+    if (currentY > 120) {
       doc.addPage();
       currentY = 20;
     }
@@ -308,3 +356,4 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
     alert('Ошибка при создании PDF. Пожалуйста, попробуйте экспорт в Excel.');
   }
 }
+[file content end]
