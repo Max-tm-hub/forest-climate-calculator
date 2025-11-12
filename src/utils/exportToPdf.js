@@ -18,7 +18,6 @@ function formatNumberGOST(num) {
 export function exportToPdf(results, inputs) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
   
   // === ЗАГОЛОВОК ПО ГОСТ ===
   doc.setFontSize(14);
@@ -69,4 +68,96 @@ export function exportToPdf(results, inputs) {
     ['IRR (внутренняя норма доходности)', results.financials.irr],
     ['Срок окупаемости (простой)', `${results.financials.simplePayback} лет`],
     ['Срок окупаемости (дисконтированный)', `${results.financials.discountedPayback} лет`],
-    ['Себестоимость углеродной единицы', `${formatNumberGOST(results.financials.cuCost)} руб./
+    ['Себестоимость углеродной единицы', `${formatNumberGOST(results.financials.cuCost)} руб./т`],
+    ['ROI (рентабельность инвестиций)', results.financials.roi],
+    ['Индекс доходности', results.financials.profitabilityIndex.toString()]
+  ];
+  
+  doc.autoTable({
+    startY: finalY + 5,
+    head: [['Показатель', 'Значение']],
+    body: financialData,
+    theme: 'grid',
+    styles: { 
+      fontSize: 9, 
+      cellPadding: 3,
+      font: 'helvetica'
+    },
+    headStyles: { 
+      fillColor: [76, 175, 80],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    margin: { left: 14, right: 14 }
+  });
+  
+  // === СВОДНАЯ ТАБЛИЦА ДЕНЕЖНЫХ ПОТОКОВ ===
+  const financialY = doc.lastAutoTable.finalY + 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('3. СВОДНАЯ ТАБЛИЦА ДЕНЕЖНЫХ ПОТОКОВ (тыс. руб.)', 14, financialY);
+  
+  // Выбираем ключевые годы для отображения
+  const keyYears = [0, 1, 5, 10, 20, 30, 50, inputs.projectYears].filter(y => y <= inputs.projectYears);
+  const cashFlowData = keyYears.map(year => [
+    year.toString(),
+    formatNumberGOST(results.cashFlows[year] / 1000),
+    formatNumberGOST(results.discountedCashFlows[year] / 1000)
+  ]);
+  
+  doc.autoTable({
+    startY: financialY + 5,
+    head: [['Год', 'Чистый денежный поток', 'Дисконтированный ДП']],
+    body: cashFlowData,
+    theme: 'grid',
+    styles: { 
+      fontSize: 8, 
+      cellPadding: 2,
+      font: 'helvetica'
+    },
+    headStyles: { 
+      fillColor: [158, 158, 158],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    margin: { left: 14, right: 14 }
+  });
+  
+  // === УГЛЕРОДНЫЕ ЕДИНИЦЫ ===
+  const cashFlowY = doc.lastAutoTable.finalY + 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('4. ПОГЛОЩЕНИЕ УГЛЕРОДА', 14, cashFlowY);
+  
+  const carbonData = keyYears.map(year => [
+    year.toString(),
+    formatNumberGOST(results.carbonUnits[year]),
+    formatNumberGOST(results.carbonUnits.slice(0, year + 1).reduce((a, b) => a + b, 0))
+  ]);
+  
+  doc.autoTable({
+    startY: cashFlowY + 5,
+    head: [['Год', 'УЕ за год (т CO₂)', 'Накопленные УЕ (т CO₂)']],
+    body: carbonData,
+    theme: 'grid',
+    styles: { 
+      fontSize: 8, 
+      cellPadding: 2,
+      font: 'helvetica'
+    },
+    headStyles: { 
+      fillColor: [121, 85, 72],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    margin: { left: 14, right: 14 }
+  });
+  
+  // === ПОДПИСИ ===
+  const finalTableY = doc.lastAutoTable.finalY + 20;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Расчет выполнен с использованием калькулятора лесных климатических проектов', pageWidth / 2, finalTableY, { align: 'center' });
+  
+  // Сохранение с именем по ГОСТ
+  const fileName = `Расчет_лесного_проекта_${inputs.treeType}_${inputs.areaHa}га_${formatDateGOST()}.pdf`;
+  doc.save(fileName);
+}
