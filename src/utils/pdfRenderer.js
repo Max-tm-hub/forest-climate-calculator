@@ -3,7 +3,15 @@ import { jsPDF } from 'jspdf';
 
 export async function exportToPdfWithCanvas(results, inputs, chartRefs = {}) {
   try {
-    // Создаем скрытый div с содержимым для PDF
+    console.log('Starting PDF export...', { hasCashFlowChart: !!chartRefs.cashFlowChart, hasCarbonChart: !!chartRefs.carbonChart });
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // === СТРАНИЦА 1: ОСНОВНЫЕ ДАННЫЕ ===
     const pdfContainer = document.createElement('div');
     pdfContainer.style.cssText = `
       position: fixed;
@@ -18,56 +26,113 @@ export async function exportToPdfWithCanvas(results, inputs, chartRefs = {}) {
       color: black;
     `;
 
-    // Генерируем HTML содержимое
     pdfContainer.innerHTML = generatePdfHTML(results, inputs);
     document.body.appendChild(pdfContainer);
 
-    // Ждем отрисовки
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Конвертируем в canvas
+    // Ждем отрисовки и конвертируем
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     const canvas = await html2canvas(pdfContainer, {
-      scale: 2,
+      scale: 1.5,
       useCORS: true,
       allowTaint: true,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      logging: false
     });
 
-    // Удаляем временный контейнер
     document.body.removeChild(pdfContainer);
 
-    // Создаем PDF из canvas
     const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
     
-    // Добавляем изображение на первую страницу
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    
-    // Добавляем графики на отдельные страницы
-    if (chartRefs.cashFlowChart) {
+
+    // === СТРАНИЦА 2: ГРАФИК ДЕНЕЖНЫХ ПОТОКОВ ===
+    if (chartRefs.cashFlowChart && chartRefs.cashFlowChart.canvas) {
+      console.log('Adding cash flow chart...');
       pdf.addPage();
-      await addChartToPDF(pdf, chartRefs.cashFlowChart, 'Денежные потоки', 10, 20, 190, 100);
-    }
-    
-    if (chartRefs.carbonChart) {
-      pdf.addPage();
-      await addChartToPDF(pdf, chartRefs.carbonChart, 'Накопленные углеродные единицы', 10, 20, 190, 100);
+      
+      // Добавляем заголовок
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('ГРАФИК ДЕНЕЖНЫХ ПОТОКОВ', 105, 20, { align: 'center' });
+      
+      // Добавляем описание
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Денежные потоки проекта в миллионах рублей', 105, 28, { align: 'center' });
+      
+      // Конвертируем график в изображение
+      const cashFlowImage = await convertChartToImage(chartRefs.cashFlowChart, 700, 400);
+      if (cashFlowImage) {
+        pdf.addImage(cashFlowImage, 'PNG', 10, 35, 190, 100);
+        console.log('Cash flow chart added successfully');
+      }
     }
 
-    // Сохраняем PDF
-    const fileName = `Расчет_лесного_проекта_${inputs.treeType}_${inputs.areaHa}га_${formatDateGOST()}.pdf`;
+    // === СТРАНИЦА 3: ГРАФИК УГЛЕРОДНЫХ ЕДИНИЦ ===
+    if (chartRefs.carbonChart && chartRefs.carbonChart.canvas) {
+      console.log('Adding carbon chart...');
+      pdf.addPage();
+      
+      // Добавляем заголовок
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('ГРАФИК НАКОПЛЕННЫХ УГЛЕРОДНЫХ ЕДИНИЦ', 105, 20, { align: 'center' });
+      
+      // Добавляем описание
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Накопленные углеродные единицы в тысячах тонн CO₂', 105, 28, { align: 'center' });
+      
+      // Конвертируем график в изображение
+      const carbonImage = await convertChartToImage(chartRefs.carbonChart, 700, 400);
+      if (carbonImage) {
+        pdf.addImage(carbonImage, 'PNG', 10, 35, 190, 100);
+        console.log('Carbon chart added successfully');
+      }
+    }
+
+    // Сохранение
+    const fileName = `Расчет_проекта_${inputs.treeType}_${inputs.areaHa}га_${formatDate()}.pdf`;
     pdf.save(fileName);
+    console.log('PDF saved successfully');
 
   } catch (error) {
     console.error('PDF generation error:', error);
-    alert('Ошибка при создании PDF');
+    alert('Ошибка при создании PDF: ' + error.message);
+  }
+}
+
+// Функция для конвертации графика в изображение
+async function convertChartToImage(chartRef, width = 700, height = 400) {
+  try {
+    const canvas = chartRef.canvas;
+    
+    // Создаем временный canvas с увеличенным разрешением
+    const tempCanvas = document.createElement('canvas');
+    const ctx = tempCanvas.getContext('2d');
+    
+    // Увеличиваем размер для лучшего качества
+    const scale = 2;
+    tempCanvas.width = width * scale;
+    tempCanvas.height = height * scale;
+    
+    // Настраиваем сглаживание
+    ctx.scale(scale, scale);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
+    // Копируем содержимое исходного canvas
+    ctx.drawImage(canvas, 0, 0, width, height);
+    
+    // Конвертируем в base64
+    return tempCanvas.toDataURL('image/png', 1.0);
+    
+  } catch (error) {
+    console.error('Error converting chart to image:', error);
+    return null;
   }
 }
 
@@ -75,160 +140,132 @@ function generatePdfHTML(results, inputs) {
   const keyYears = [0, 1, 5, 10, 20, 30, 50, inputs.projectYears].filter(y => y <= inputs.projectYears);
   
   return `
-    <div style="font-family: Arial, sans-serif; color: #000;">
-      <!-- Заголовок -->
-      <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="font-size: 20px; margin-bottom: 10px;">РАСЧЕТ ЭФФЕКТИВНОСТИ</h1>
-        <h2 style="font-size: 18px; margin-bottom: 20px;">ЛЕСНОГО КЛИМАТИЧЕСКОГО ПРОЕКТА</h2>
-        <p><strong>Порода деревьев:</strong> ${inputs.treeType}</p>
-        <p><strong>Площадь:</strong> ${inputs.areaHa} га</p>
-        <p><strong>Срок проекта:</strong> ${inputs.projectYears} лет</p>
-        <p><strong>Дата составления:</strong> ${formatDateGOST()}</p>
+    <div style="font-family: Arial, sans-serif; color: #000; max-width: 800px;">
+      <div style="text-align: center; margin-bottom: 30px; padding: 20px; border-bottom: 2px solid #2e7d32;">
+        <h1 style="font-size: 24px; margin: 0 0 10px 0; color: #2e7d32;">РАСЧЕТ ЭФФЕКТИВНОСТИ</h1>
+        <h2 style="font-size: 20px; margin: 0 0 20px 0; color: #2e7d32;">ЛЕСНОГО КЛИМАТИЧЕСКОГО ПРОЕКТА</h2>
+        <div style="display: flex; justify-content: center; gap: 30px; font-size: 14px;">
+          <div><strong>Порода:</strong> ${inputs.treeType}</div>
+          <div><strong>Площадь:</strong> ${inputs.areaHa} га</div>
+          <div><strong>Срок:</strong> ${inputs.projectYears} лет</div>
+        </div>
+        <div style="margin-top: 10px; font-size: 12px; color: #666;">Дата составления: ${formatDate()}</div>
       </div>
 
-      <!-- Параметры проекта -->
+      <div style="margin-bottom: 25px;">
+        <h3 style="font-size: 16px; background: #2196F3; color: white; padding: 8px; margin: 0 0 15px 0; border-radius: 4px;">1. ПАРАМЕТРЫ ПРОЕКТА</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; width: 60%; background: #f9f9f9;"><strong>Порода деревьев</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px; width: 40%;">${inputs.treeType}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; background: #f9f9f9;"><strong>Площадь проекта, га</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${inputs.areaHa}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; background: #f9f9f9;"><strong>Срок проекта, лет</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${inputs.projectYears}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; background: #f9f9f9;"><strong>Ставка дисконтирования, %</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${(inputs.discountRate * 100).toFixed(1)}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; background: #f9f9f9;"><strong>Цена углеродной единицы, руб/т</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${formatNumber(inputs.carbonUnitPrice)}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; background: #f9f9f9;"><strong>Цена древесины, руб/м³</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${formatNumber(inputs.timberPrice)}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <h3 style="font-size: 16px; background: #4CAF50; color: white; padding: 8px; margin: 0 0 15px 0; border-radius: 4px;">2. ФИНАНСОВЫЕ ПОКАЗАТЕЛИ</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; width: 60%; background: #f9f9f9;"><strong>NPV (чистая приведенная стоимость)</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px; width: 40%;">${formatNumber(results.financials.npv)} руб.</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; background: #f9f9f9;"><strong>IRR (внутренняя норма доходности)</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${results.financials.irr}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; background: #f9f9f9;"><strong>Срок окупаемости (простой)</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${results.financials.simplePayback} лет</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; background: #f9f9f9;"><strong>Срок окупаемости (дисконтированный)</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${results.financials.discountedPayback} лет</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; background: #f9f9f9;"><strong>Себестоимость углеродной единицы</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${formatNumber(results.financials.cuCost)} руб./т</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px; background: #f9f9f9;"><strong>ROI (рентабельность инвестиций)</strong></td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${results.financials.roi}</td>
+          </tr>
+        </table>
+      </div>
+
       <div style="margin-bottom: 20px;">
-        <h3 style="font-size: 16px; background: #f0f0f0; padding: 5px; margin-bottom: 10px;">1. ПАРАМЕТРЫ ПРОЕКТА</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr style="background: #2196F3; color: white;">
-            <th style="border: 1px solid #000; padding: 8px; text-align: left;">Параметр</th>
-            <th style="border: 1px solid #000; padding: 8px; text-align: left;">Значение</th>
-          </tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">Порода деревьев</td><td style="border: 1px solid #000; padding: 8px;">${inputs.treeType}</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">Площадь проекта, га</td><td style="border: 1px solid #000; padding: 8px;">${inputs.areaHa}</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">Срок проекта, лет</td><td style="border: 1px solid #000; padding: 8px;">${inputs.projectYears}</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">Ставка дисконтирования, %</td><td style="border: 1px solid #000; padding: 8px;">${(inputs.discountRate * 100).toFixed(1)}</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">Уровень инфляции, %</td><td style="border: 1px solid #000; padding: 8px;">${(inputs.inflation * 100).toFixed(1)}</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">Цена углеродной единицы, руб/т</td><td style="border: 1px solid #000; padding: 8px;">${formatNumberGOST(inputs.carbonUnitPrice)}</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">Цена древесины, руб/м³</td><td style="border: 1px solid #000; padding: 8px;">${formatNumberGOST(inputs.timberPrice)}</td></tr>
-        </table>
+        <h3 style="font-size: 16px; background: #795548; color: white; padding: 8px; margin: 0 0 15px 0; border-radius: 4px;">3. СВОДНЫЕ ДАННЫЕ ПО ГОДАМ</h3>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+            <h4 style="font-size: 14px; margin: 0 0 10px 0; color: #2196F3;">Денежные потоки</h4>
+            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+              <tr style="background: #e0e0e0;">
+                <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Год</th>
+                <th style="border: 1px solid #ddd; padding: 6px; text-align: right;">ДП (тыс.руб)</th>
+              </tr>
+              ${keyYears.map(year => `
+                <tr>
+                  <td style="border: 1px solid #ddd; padding: 6px;">${year}</td>
+                  <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${formatNumber(results.cashFlows[year] / 1000)}</td>
+                </tr>
+              `).join('')}
+            </table>
+          </div>
+          
+          <div>
+            <h4 style="font-size: 14px; margin: 0 0 10px 0; color: #4CAF50;">Углеродные единицы</h4>
+            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+              <tr style="background: #e0e0e0;">
+                <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Год</th>
+                <th style="border: 1px solid #ddd; padding: 6px; text-align: right;">УЕ (т CO₂)</th>
+              </tr>
+              ${keyYears.map(year => `
+                <tr>
+                  <td style="border: 1px solid #ddd; padding: 6px;">${year}</td>
+                  <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${formatNumber(results.carbonUnits[year])}</td>
+                </tr>
+              `).join('')}
+            </table>
+          </div>
+        </div>
       </div>
 
-      <!-- Финансовые показатели -->
-      <div style="margin-bottom: 20px;">
-        <h3 style="font-size: 16px; background: #f0f0f0; padding: 5px; margin-bottom: 10px;">2. ФИНАНСОВЫЕ ПОКАЗАТЕЛИ</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr style="background: #4CAF50; color: white;">
-            <th style="border: 1px solid #000; padding: 8px; text-align: left;">Показатель</th>
-            <th style="border: 1px solid #000; padding: 8px; text-align: left;">Значение</th>
-          </tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">NPV (чистая приведенная стоимость)</td><td style="border: 1px solid #000; padding: 8px;">${formatNumberGOST(results.financials.npv)} руб.</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">IRR (внутренняя норма доходности)</td><td style="border: 1px solid #000; padding: 8px;">${results.financials.irr}</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">Срок окупаемости (простой)</td><td style="border: 1px solid #000; padding: 8px;">${results.financials.simplePayback} лет</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">Срок окупаемости (дисконтированный)</td><td style="border: 1px solid #000; padding: 8px;">${results.financials.discountedPayback} лет</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">Себестоимость углеродной единицы</td><td style="border: 1px solid #000; padding: 8px;">${formatNumberGOST(results.financials.cuCost)} руб./т</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">ROI (рентабельность инвестиций)</td><td style="border: 1px solid #000; padding: 8px;">${results.financials.roi}</td></tr>
-          <tr><td style="border: 1px solid #000; padding: 8px;">Индекс доходности</td><td style="border: 1px solid #000; padding: 8px;">${results.financials.profitabilityIndex}</td></tr>
-        </table>
-      </div>
-
-      <!-- Данные по годам -->
-      <div style="margin-bottom: 20px;">
-        <h3 style="font-size: 16px; background: #f0f0f0; padding: 5px; margin-bottom: 10px;">3. СВОДНЫЕ ДАННЫЕ ПО ГОДАМ</h3>
-        
-        <h4 style="font-size: 14px; margin: 10px 0;">Денежные потоки</h4>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
-          <tr style="background: #9E9E9E; color: white;">
-            <th style="border: 1px solid #000; padding: 6px; text-align: left;">Год</th>
-            <th style="border: 1px solid #000; padding: 6px; text-align: left;">Чистый ДП (тыс. руб.)</th>
-            <th style="border: 1px solid #000; padding: 6px; text-align: left;">Дисконт. ДП (тыс. руб.)</th>
-          </tr>
-          ${keyYears.map(year => `
-            <tr>
-              <td style="border: 1px solid #000; padding: 6px;">${year}</td>
-              <td style="border: 1px solid #000; padding: 6px;">${formatNumberGOST(results.cashFlows[year] / 1000)}</td>
-              <td style="border: 1px solid #000; padding: 6px;">${formatNumberGOST(results.discountedCashFlows[year] / 1000)}</td>
-            </tr>
-          `).join('')}
-        </table>
-
-        <h4 style="font-size: 14px; margin: 10px 0;">Углеродные единицы</h4>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr style="background: #795548; color: white;">
-            <th style="border: 1px solid #000; padding: 6px; text-align: left;">Год</th>
-            <th style="border: 1px solid #000; padding: 6px; text-align: left;">УЕ за год (т CO₂)</th>
-            <th style="border: 1px solid #000; padding: 6px; text-align: left;">Накопленные УЕ (т CO₂)</th>
-          </tr>
-          ${keyYears.map(year => `
-            <tr>
-              <td style="border: 1px solid #000; padding: 6px;">${year}</td>
-              <td style="border: 1px solid #000; padding: 6px;">${formatNumberGOST(results.carbonUnits[year])}</td>
-              <td style="border: 1px solid #000; padding: 6px;">${formatNumberGOST(results.carbonUnits.slice(0, year + 1).reduce((a, b) => a + b, 0))}</td>
-            </tr>
-          `).join('')}
-        </table>
-      </div>
-
-      <!-- Заключение -->
-      <div>
-        <h3 style="font-size: 16px; background: #f0f0f0; padding: 5px; margin-bottom: 10px;">4. ЗАКЛЮЧЕНИЕ</h3>
-        <p>Настоящий отчет содержит расчет экономической эффективности лесного климатического проекта.</p>
-        <p><strong>Порода деревьев:</strong> ${inputs.treeType}</p>
-        <p><strong>Площадь проекта:</strong> ${inputs.areaHa} га</p>
-        <p><strong>Срок реализации:</strong> ${inputs.projectYears} лет</p>
-        
-        <p><strong>Ключевые финансовые показатели:</strong></p>
-        <ul>
-          <li>Чистая приведенная стоимость (NPV): ${formatNumberGOST(results.financials.npv)} руб.</li>
-          <li>Внутренняя норма доходности (IRR): ${results.financials.irr}</li>
-          <li>Срок окупаемости: ${results.financials.simplePayback} лет</li>
-          <li>Себестоимость углеродной единицы: ${formatNumberGOST(results.financials.cuCost)} руб./т</li>
-        </ul>
-        
-        <p>Отчет составлен в соответствии с методикой расчета лесных климатических проектов.</p>
-        <p style="font-style: italic; font-size: 10px; margin-top: 20px;">
-          Отчет сгенерирован автоматически. Данные носят информационный характер.
+      <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; border-left: 4px solid #2e7d32;">
+        <p style="margin: 0; font-size: 11px; line-height: 1.5;">
+          <strong>Примечание:</strong> Графики денежных потоков и накопленных углеродных единиц представлены на следующих страницах.
+          Денежные потоки показаны в миллионах рублей, углеродные единицы - в тысячах тонн CO₂.
         </p>
       </div>
     </div>
   `;
 }
 
-async function addChartToPDF(pdf, chartRef, title, x, y, width, height) {
-  try {
-    if (chartRef && chartRef.canvas) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const canvas = chartRef.canvas;
-      const offScreenCanvas = document.createElement('canvas');
-      const offScreenCtx = offScreenCanvas.getContext('2d');
-      
-      const scale = 2;
-      offScreenCanvas.width = canvas.width * scale;
-      offScreenCanvas.height = canvas.height * scale;
-      
-      offScreenCtx.scale(scale, scale);
-      offScreenCtx.imageSmoothingEnabled = true;
-      offScreenCtx.imageSmoothingQuality = 'high';
-      offScreenCtx.drawImage(canvas, 0, 0);
-      
-      const imageData = offScreenCanvas.toDataURL('image/png', 1.0);
-      
-      // Добавляем заголовок
-      pdf.setFontSize(12);
-      pdf.text(title, x + width / 2, y - 5, { align: 'center' });
-      
-      // Добавляем изображение графика
-      pdf.addImage(imageData, 'PNG', x, y, width, height);
-      
-      return true;
-    }
-  } catch (error) {
-    console.error('Error adding chart to PDF:', error);
-  }
-  return false;
-}
-
-function formatDateGOST() {
+function formatDate() {
   const now = new Date();
-  const day = String(now.getDate()).padStart(2, '0');
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const year = now.getFullYear();
-  return `${day}.${month}.${year}`;
+  return `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
 }
 
-function formatNumberGOST(num) {
+function formatNumber(num) {
   if (num === null || num === undefined) return '0';
-  const rounded = Math.round(num);
-  return rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
