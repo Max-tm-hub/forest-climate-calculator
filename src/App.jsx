@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import CalculatorForm from './components/CalculatorForm';
 import ResultsSection from './components/ResultsSection';
 import ExportButtons from './components/ExportButtons';
@@ -36,6 +36,7 @@ function App() {
   });
 
   const [results, setResults] = useState(null);
+  const [chartRefs, setChartRefs] = useState({});
 
   const handleInputChange = (name, value) => {
     setInputs(prev => ({ ...prev, [name]: value }));
@@ -52,7 +53,19 @@ function App() {
   };
 
   const handleExportExcel = () => exportToExcel(results, inputs);
-  const handleExportPdf = () => exportToPdf(results, inputs);
+  
+  const handleChartsReady = (refs) => {
+    setChartRefs(refs);
+  };
+
+  const handleExportPdf = () => {
+    if (results && chartRefs.cashFlowChart && chartRefs.carbonChart) {
+      exportToPdf(results, inputs, chartRefs);
+    } else {
+      // Если графики не готовы, экспортируем без них
+      exportToPdf(results, inputs, {});
+    }
+  };
 
   return (
     <div style={{ fontFamily: 'Segoe UI, sans-serif', maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
@@ -64,8 +77,15 @@ function App() {
       <CalculatorForm inputs={inputs} onInputChange={handleInputChange} onSubmit={handleSubmit} />
       {results && (
         <>
-          <ResultsSection results={results} inputs={inputs} />
-          <ExportButtons onExportExcel={handleExportExcel} onExportPdf={handleExportPdf} />
+          <ResultsSection 
+            results={results} 
+            inputs={inputs} 
+            onChartsReady={handleChartsReady}
+          />
+          <ExportButtons 
+            onExportExcel={handleExportExcel} 
+            onExportPdf={handleExportPdf} 
+          />
         </>
       )}
     </div>
