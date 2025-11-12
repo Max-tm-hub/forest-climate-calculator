@@ -12,25 +12,31 @@ function formatDateGOST() {
 
 // Функция для форматирования чисел по ГОСТ (с пробелами)
 function formatNumberGOST(num) {
+  if (num === null || num === undefined) return '0';
   return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
 export function exportToPdf(results, inputs) {
+  // Создаем PDF с поддержкой кириллицы
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   
+  // Добавляем поддержку кириллических символов
+  doc.setLanguage('ru-RU');
+  
   // === ЗАГОЛОВОК ПО ГОСТ ===
-  doc.setFontSize(14);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('РАСЧЕТ ЭФФЕКТИВНОСТИ ЛЕСНОГО КЛИМАТИЧЕСКОГО ПРОЕКТА', pageWidth / 2, 20, { align: 'center' });
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Дата составления: ${formatDateGOST()}`, pageWidth - 20, 30, { align: 'right' });
+  doc.text(`Дата составления: ${formatDateGOST()}`, 14, 35);
   
   // === ПАРАМЕТРЫ ПРОЕКТА ===
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('1. ПАРАМЕТРЫ ПРОЕКТА', 14, 45);
+  doc.text('1. ПАРАМЕТРЫ ПРОЕКТА', 14, 50);
   
   const paramsData = [
     ['Порода деревьев:', inputs.treeType],
@@ -41,27 +47,33 @@ export function exportToPdf(results, inputs) {
   ];
   
   doc.autoTable({
-    startY: 50,
+    startY: 55,
     head: [['Параметр', 'Значение']],
     body: paramsData,
     theme: 'grid',
     styles: { 
-      fontSize: 9, 
-      cellPadding: 3,
-      font: 'helvetica'
+      fontSize: 10, 
+      cellPadding: 4,
+      font: 'helvetica',
+      fontStyle: 'normal'
     },
     headStyles: { 
       fillColor: [33, 150, 243],
       textColor: 255,
-      fontStyle: 'bold'
+      fontStyle: 'bold',
+      fontSize: 10
+    },
+    bodyStyles: {
+      fontStyle: 'normal'
     },
     margin: { left: 14, right: 14 }
   });
   
   // === ФИНАНСОВЫЕ ПОКАЗАТЕЛИ ===
-  const finalY = doc.lastAutoTable.finalY + 10;
+  const paramsY = doc.lastAutoTable.finalY + 15;
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('2. ФИНАНСОВЫЕ ПОКАЗАТЕЛИ', 14, finalY);
+  doc.text('2. ФИНАНСОВЫЕ ПОКАЗАТЕЛИ', 14, paramsY);
   
   const financialData = [
     ['NPV (чистая приведенная стоимость)', `${formatNumberGOST(results.financials.npv)} руб.`],
@@ -74,25 +86,31 @@ export function exportToPdf(results, inputs) {
   ];
   
   doc.autoTable({
-    startY: finalY + 5,
+    startY: paramsY + 5,
     head: [['Показатель', 'Значение']],
     body: financialData,
     theme: 'grid',
     styles: { 
-      fontSize: 9, 
-      cellPadding: 3,
-      font: 'helvetica'
+      fontSize: 10, 
+      cellPadding: 4,
+      font: 'helvetica',
+      fontStyle: 'normal'
     },
     headStyles: { 
       fillColor: [76, 175, 80],
       textColor: 255,
-      fontStyle: 'bold'
+      fontStyle: 'bold',
+      fontSize: 10
+    },
+    bodyStyles: {
+      fontStyle: 'normal'
     },
     margin: { left: 14, right: 14 }
   });
   
   // === СВОДНАЯ ТАБЛИЦА ДЕНЕЖНЫХ ПОТОКОВ ===
-  const financialY = doc.lastAutoTable.finalY + 10;
+  const financialY = doc.lastAutoTable.finalY + 15;
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('3. СВОДНАЯ ТАБЛИЦА ДЕНЕЖНЫХ ПОТОКОВ (тыс. руб.)', 14, financialY);
   
@@ -110,22 +128,39 @@ export function exportToPdf(results, inputs) {
     body: cashFlowData,
     theme: 'grid',
     styles: { 
-      fontSize: 8, 
-      cellPadding: 2,
-      font: 'helvetica'
+      fontSize: 9, 
+      cellPadding: 3,
+      font: 'helvetica',
+      fontStyle: 'normal'
     },
     headStyles: { 
       fillColor: [158, 158, 158],
       textColor: 255,
-      fontStyle: 'bold'
+      fontStyle: 'bold',
+      fontSize: 9
+    },
+    bodyStyles: {
+      fontStyle: 'normal'
     },
     margin: { left: 14, right: 14 }
   });
   
   // === УГЛЕРОДНЫЕ ЕДИНИЦЫ ===
-  const cashFlowY = doc.lastAutoTable.finalY + 10;
-  doc.setFont('helvetica', 'bold');
-  doc.text('4. ПОГЛОЩЕНИЕ УГЛЕРОДА', 14, cashFlowY);
+  const cashFlowY = doc.lastAutoTable.finalY + 15;
+  
+  // Проверяем, не вышли ли за пределы страницы
+  if (cashFlowY > 250) {
+    doc.addPage();
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('4. ПОГЛОЩЕНИЕ УГЛЕРОДА', 14, 20);
+  } else {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('4. ПОГЛОЩЕНИЕ УГЛЕРОДА', 14, cashFlowY);
+  }
+  
+  const startY = cashFlowY > 250 ? 25 : cashFlowY + 5;
   
   const carbonData = keyYears.map(year => [
     year.toString(),
@@ -134,28 +169,42 @@ export function exportToPdf(results, inputs) {
   ]);
   
   doc.autoTable({
-    startY: cashFlowY + 5,
+    startY: startY,
     head: [['Год', 'УЕ за год (т CO₂)', 'Накопленные УЕ (т CO₂)']],
     body: carbonData,
     theme: 'grid',
     styles: { 
-      fontSize: 8, 
-      cellPadding: 2,
-      font: 'helvetica'
+      fontSize: 9, 
+      cellPadding: 3,
+      font: 'helvetica',
+      fontStyle: 'normal'
     },
     headStyles: { 
       fillColor: [121, 85, 72],
       textColor: 255,
-      fontStyle: 'bold'
+      fontStyle: 'bold',
+      fontSize: 9
+    },
+    bodyStyles: {
+      fontStyle: 'normal'
     },
     margin: { left: 14, right: 14 }
   });
   
   // === ПОДПИСИ ===
-  const finalTableY = doc.lastAutoTable.finalY + 20;
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Расчет выполнен с использованием калькулятора лесных климатических проектов', pageWidth / 2, finalTableY, { align: 'center' });
+  const finalTableY = doc.lastAutoTable.finalY + 15;
+  
+  // Если мало места, создаем новую страницу для подписей
+  if (finalTableY > 270) {
+    doc.addPage();
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Расчет выполнен с использованием калькулятора лесных климатических проектов', pageWidth / 2, 20, { align: 'center' });
+  } else {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Расчет выполнен с использованием калькулятора лесных климатических проектов', pageWidth / 2, finalTableY, { align: 'center' });
+  }
   
   // Сохранение с именем по ГОСТ
   const fileName = `Расчет_лесного_проекта_${inputs.treeType}_${inputs.areaHa}га_${formatDateGOST()}.pdf`;
