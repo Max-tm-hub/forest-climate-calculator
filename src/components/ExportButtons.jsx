@@ -1,59 +1,63 @@
+// src/components/ExportButtons.jsx
 import React from 'react';
 import { exportToExcel } from '../utils/exportToExcel';
-import { exportToPdfWithCanvas } from '../utils/pdfRenderer';
+import { exportGostReport } from '../utils/exportToPdf';
 
 export default function ExportButtons({ results, inputs, chartRefs }) {
   const handleExportExcel = () => {
     if (results) {
       exportToExcel(results, inputs);
     } else {
-      alert('Нет данных для экспорта');
+      alert('Сначала выполните расчет');
     }
   };
 
   const handleExportPdf = () => {
-    console.log('Export PDF clicked, chart refs:', chartRefs);
-    
-    if (results && chartRefs) {
-      if (chartRefs.cashFlowChart || chartRefs.carbonChart) {
-        exportToPdfWithCanvas(results, inputs, chartRefs);
-      } else {
-        alert('Графики не готовы для экспорта. Пожалуйста, подождите немного и попробуйте снова.');
-      }
-    } else {
-      alert('Нет данных для экспорта');
+    if (!results) {
+      alert('Сначала выполните расчет');
+      return;
     }
+
+    if (!chartRefs.cashFlowChart || !chartRefs.carbonChart) {
+      alert('Графики еще не готовы. Подождите несколько секунд и попробуйте снова.');
+      return;
+    }
+
+    console.log('Starting GOST PDF export with chart refs:', chartRefs);
+    exportGostReport(results, inputs, chartRefs);
   };
 
   return (
-    <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+    <div style={{ marginTop: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
       <button 
-        onClick={handleExportExcel} 
+        onClick={handleExportExcel}
         style={{ 
-          padding: '10px 20px', 
+          padding: '12px 24px', 
           backgroundColor: '#4CAF50', 
           color: 'white', 
           border: 'none', 
-          borderRadius: '4px', 
+          borderRadius: '6px', 
           cursor: 'pointer',
-          fontSize: '14px'
+          fontSize: '14px',
+          fontWeight: 'bold'
         }}
       >
         📊 Экспорт в Excel
       </button>
       <button 
-        onClick={handleExportPdf} 
+        onClick={handleExportPdf}
         style={{ 
-          padding: '10px 20px', 
+          padding: '12px 24px', 
           backgroundColor: '#2196F3', 
           color: 'white', 
           border: 'none', 
-          borderRadius: '4px', 
+          borderRadius: '6px', 
           cursor: 'pointer',
-          fontSize: '14px'
+          fontSize: '14px',
+          fontWeight: 'bold'
         }}
       >
-        📄 Экспорт в PDF
+        📄 Экспорт в PDF (ГОСТ)
       </button>
     </div>
   );
