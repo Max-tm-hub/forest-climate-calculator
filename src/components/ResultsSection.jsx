@@ -1,167 +1,208 @@
-// src/components/ResultsSection.jsx
 import React from 'react';
 import { Bar, Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
+import { 
+  Chart as ChartJS, 
+  CategoryScale, 
+  LinearScale, 
+  BarElement, 
+  LineElement, 
+  PointElement, 
+  Title, 
+  Tooltip, 
+  Legend 
 } from 'chart.js';
 
 ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
+  CategoryScale, 
+  LinearScale, 
+  BarElement, 
+  LineElement, 
+  PointElement, 
+  Title, 
+  Tooltip, 
+  Legend
 );
 
 export default function ResultsSection({ results, inputs }) {
-  if (!results || !inputs) {
-    return <div>Результаты ещё не рассчитаны</div>;
-  }
+  if (!results) return null;
 
-  if (!results.carbonUnits || !results.cashFlows) {
-    return <div>Ошибка: результаты не содержат нужных данных</div>;
-  }
-
+  // Уменьшаем количество отображаемых лет для читаемости
+  const step = Math.max(1, Math.floor(inputs.projectYears / 20));
   const years = Array.from({ length: inputs.projectYears + 1 }, (_, i) => i);
-  const yearLabels = years.map(y => (y % 5 === 0 ? String(y) : ''));
-
-  // ✅ 1. График УЕ — использует данные из Excel: "Количество углеродных единиц"
+  const filteredYears = years.filter((_, i) => i % step === 0 || i === 0 || i === inputs.projectYears);
+  
   const carbonData = {
-    labels: years.map(String),
-    datasets: [
-      {
-        label: 'Углеродные единицы, т',
-        // ⚠️ КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: явно указываем имя свойства `data`
-         results.carbonUnits,data: // ← строка 52:16 — была ошибка
-        borderColor: '#1976d2',
-        backgroundColor: 'rgba(25, 118, 210, 0.1)',
-        stepped: 'before',
-        fill: true,
-        tension: 0,
-      },
-    ],
+    labels: filteredYears.map(y => y.toString()),
+    datasets: [{
+      label: 'УЕ (т CO₂)',
+      data: filteredYears.map(i => results.carbonUnits[i]),
+      borderColor: '#2e7d32',
+      backgroundColor: 'rgba(46, 125, 50, 0.1)',
+      tension: 0.4,
+      fill: true,
+      pointBackgroundColor: '#2e7d32',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      pointRadius: 4
+    }]
   };
 
-  // ✅ 2. Накопленный денежный поток
-  const cumulativeCashFlow = results.cashFlows.reduce((arr, cf, i) => {
-    arr[i] = (arr[i - 1] || 0) + cf;
-    return arr;
-  }, []);
-
-  // ✅ 3. График денежных потоков
   const cashFlowData = {
-    labels: years.map(String),
+    labels: filteredYears.map(y => y.toString()),
     datasets: [
       {
-        type: 'bar',
-        label: 'Чистый ДП',
-         results.cashFlows, // ← строка 52:16 — была ошибка
-        backgroundColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 0.7)' : 'rgba(244, 67, 54, 0.7)'),
-        borderColor: (ctx) => (ctx.parsed.y >= 0 ? 'rgba(76, 175, 80, 1)' : 'rgba(244, 67, 54, 1)'),
-        borderWidth: 1,
+        label: 'Чистый ДП (тыс. ₽)',
+        data: filteredYears.map(i => results.cashFlows[i] / 1000),
+        backgroundColor: 'rgba(25, 118, 210, 0.7)',
+        order: 2
       },
       {
-        type: 'line',
-        label: 'Накопленный ДП',
-         cumulativeCashFlow, // ← строка 52:16 — была ошибка
-        borderColor: '#673ab7',
+        label: 'Дисконтированный ДП (тыс. ₽)',
+        data: filteredYears.map(i => results.discountedCashFlows[i] / 1000),
+        borderColor: '#d32f2f',
         backgroundColor: 'transparent',
-        borderWidth: 2,
-        fill: false,
-        tension: 0.2,
-      },
-    ],
+        type: 'line',
+        order: 1,
+        borderWidth: 3,
+        pointBackgroundColor: '#d32f2f',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 4
+      }
+    ]
   };
 
-  const options = {
+  const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top' },
-      tooltip: {
-        callbacks: {
-          label: function (ctx) {
-            const value = ctx.parsed.y;
-            const unit = ctx.dataset.label.includes('единиц') ? 'т' : '₽';
-            return `${ctx.dataset.label}: ${value.toLocaleString()} ${unit}`;
-          },
-        },
+      legend: {
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 20,
+          font: {
+            size: 12
+          }
+        }
       },
+      title: {
+        display: true,
+        font: {
+          size: 14
+        }
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+        titleFont: {
+          size: 12
+        },
+        bodyFont: {
+          size: 12
+        }
+      }
     },
     scales: {
       x: {
-        ticks: {
-          callback: (_, i) => yearLabels[i],
+        title: {
+          display: true,
+          text: 'Год проекта',
+          font: {
+            size: 12,
+            weight: 'bold'
+          }
         },
+        grid: {
+          display: false
+        }
       },
+      y: {
+        title: {
+          display: true,
+          text: 'Значение',
+          font: {
+            size: 12,
+            weight: 'bold'
+          }
+        },
+        beginAtZero: true
+      }
     },
+    interaction: {
+      mode: 'nearest',
+      axis: 'x',
+      intersect: false
+    }
   };
+
+  const metrics = [
+    { key: 'npv', label: 'NPV', value: `${results.financials.npv.toLocaleString('ru-RU')} ₽` },
+    { key: 'irr', label: 'IRR', value: results.financials.irr },
+    { key: 'simplePayback', label: 'Срок окупаемости (лет)', value: results.financials.simplePayback },
+    { key: 'discountedPayback', label: 'Диск. срок окупаемости (лет)', value: results.financials.discountedPayback },
+    { key: 'cuCost', label: 'Себестоимость УЕ', value: `${results.financials.cuCost.toLocaleString('ru-RU')} ₽/т` },
+    { key: 'roi', label: 'ROI', value: results.financials.roi },
+    { key: 'profitabilityIndex', label: 'Индекс доходности', value: results.financials.profitabilityIndex }
+  ];
 
   return (
     <div style={{ marginTop: '30px' }}>
-      <h3>Результаты расчёта</h3>
-
-      {/* Сводка финансовых показателей */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: '12px',
-          marginBottom: '20px',
-        }}
-      >
-        {results.financials &&
-          Object.entries(results.financials).map(([key, value]) => (
-            <div
-              key={key}
-              style={{
-                padding: '10px',
-                border: '1px solid #ddd',
-                textAlign: 'center',
-                backgroundColor: '#fafafa',
-              }}
-            >
-              <strong>
-                {key === 'npv'
-                  ? 'NPV'
-                  : key === 'irr'
-                  ? 'IRR'
-                  : key === 'cuCost'
-                  ? 'Себестоимость УЕ'
-                  : key === 'simplePayback'
-                  ? 'Срок окупаемости'
-                  : key === 'discountedPayback'
-                  ? 'Диск. срок окупаемости'
-                  : key}
-              </strong>
-              <br />
-              {value}
-            </div>
-          ))}
+      <h3 style={{ color: '#2e7d32', marginBottom: '20px' }}>Результаты расчёта</h3>
+      
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gap: '12px', 
+        marginBottom: '30px' 
+      }}>
+        {metrics.map(({ key, label, value }) => (
+          <div key={key} style={{ 
+            border: '1px solid #e0e0e0', 
+            padding: '16px', 
+            borderRadius: '8px', 
+            textAlign: 'center', 
+            backgroundColor: '#f8f9fa',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '8px' }}>{label}</div>
+            <div style={{ fontWeight: 'bold', fontSize: '1.1em', color: '#1976d2' }}>{value}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Графики */}
-      <h4>Динамика углеродных единиц</h4>
-      <div style={{ height: '350px' }}>
-        <Line data={carbonData} options={options} />
-      </div>
-
-      <h4 style={{ marginTop: '20px' }}>Денежные потоки</h4>
-      <div style={{ height: '400px' }}>
-        <Bar data={cashFlowData} options={options} />
+      <h4 style={{ marginBottom: '20px', color: '#455a64' }}>Графики проекта</h4>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr', 
+        gap: '30px', 
+        height: '450px',
+        marginBottom: '30px'
+      }}>
+        <div style={{ 
+          backgroundColor: 'white', 
+          padding: '20px', 
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}>
+          <h5 style={{ textAlign: 'center', marginBottom: '15px', color: '#2e7d32' }}>
+            Накопленные углеродные единицы
+          </h5>
+          <Line data={carbonData} options={chartOptions} />
+        </div>
+        <div style={{ 
+          backgroundColor: 'white', 
+          padding: '20px', 
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}>
+          <h5 style={{ textAlign: 'center', marginBottom: '15px', color: '#1976d2' }}>
+            Денежные потоки (тыс. рублей)
+          </h5>
+          <Bar data={cashFlowData} options={chartOptions} />
+        </div>
       </div>
     </div>
   );
