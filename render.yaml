@@ -9,6 +9,8 @@ services:
         value: 18.20.4
       - key: GENERATE_SOURCEMAP
         value: false
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=4096"
     headers:
       - path: /*
         name: Cache-Control
