@@ -1,8 +1,11 @@
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
+// Добавляем поддержку кириллицы
 function registerRussianFont(doc) {
+  // Используем стандартные шрифты, которые поддерживают кириллицу
   doc.setFont('helvetica');
+  doc.setFontSize(10);
 }
 
 function formatDateGOST() {
@@ -41,10 +44,12 @@ async function addChartToPDF(doc, chartRef, title, x, y, width = 170, height = 9
       
       const imageData = offScreenCanvas.toDataURL('image/png', 1.0);
       
+      // Добавляем заголовок графика
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text(title, x + width / 2, y - 5, { align: 'center' });
       
+      // Добавляем изображение графика
       doc.addImage(imageData, 'PNG', x, y, width, height);
       
       return true;
@@ -57,12 +62,15 @@ async function addChartToPDF(doc, chartRef, title, x, y, width = 170, height = 9
 
 export async function exportToPdf(results, inputs, chartRefs = {}) {
   try {
+    // Создаем PDF с правильной кодировкой
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     
+    // Регистрируем шрифт для кириллицы
     registerRussianFont(doc);
     
+    // === ТИТУЛЬНЫЙ ЛИСТ ===
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.text('РАСЧЕТ ЭФФЕКТИВНОСТИ', pageWidth / 2, 60, { align: 'center' });
@@ -78,10 +86,12 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
     doc.text(`Дата составления: ${formatDateGOST()}`, pageWidth / 2, 140, { align: 'center' });
     doc.text(`Отчет сгенерирован системой расчета лесных климатических проектов`, pageWidth / 2, 150, { align: 'center' });
     
+    // Новая страница для основных данных
     doc.addPage();
     
     let currentY = 20;
     
+    // === ПАРАМЕТРЫ ПРОЕКТА ===
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text('1. ПАРАМЕТРЫ ПРОЕКТА', 20, currentY);
@@ -105,16 +115,19 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
       styles: { 
         fontSize: 10, 
         cellPadding: 4,
-        font: 'helvetica'
+        font: 'helvetica',
+        fontStyle: 'normal'
       },
       headStyles: { 
         fillColor: [33, 150, 243],
         textColor: 255,
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        font: 'helvetica'
       },
       margin: { left: 20, right: 20 }
     });
     
+    // === ФИНАНСОВЫЕ ПОКАЗАТЕЛИ ===
     currentY = doc.lastAutoTable.finalY + 15;
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
@@ -139,18 +152,22 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
       styles: { 
         fontSize: 10, 
         cellPadding: 4,
-        font: 'helvetica'
+        font: 'helvetica',
+        fontStyle: 'normal'
       },
       headStyles: { 
         fillColor: [76, 175, 80],
         textColor: 255,
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        font: 'helvetica'
       },
       margin: { left: 20, right: 20 }
     });
     
+    // === ГРАФИКИ ===
     currentY = doc.lastAutoTable.finalY + 15;
     
+    // Проверяем, есть ли место для графиков
     if (currentY > 100) {
       doc.addPage();
       currentY = 20;
@@ -161,6 +178,7 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
     doc.text('3. ГРАФИЧЕСКАЯ ВИЗУАЛИЗАЦИЯ', 20, currentY);
     currentY += 15;
     
+    // Добавляем графики, если они переданы
     let chartsAdded = false;
     
     if (chartRefs.cashFlowChart) {
@@ -180,6 +198,7 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
       }
     }
     
+    // Проверяем место для второго графика
     if (currentY > 150) {
       doc.addPage();
       currentY = 20;
@@ -210,6 +229,7 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
       currentY += 100;
     }
     
+    // === ДЕТАЛЬНЫЕ ДАННЫЕ ===
     if (currentY > 120) {
       doc.addPage();
       currentY = 20;
@@ -220,8 +240,10 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
     doc.text('4. СВОДНЫЕ ДАННЫЕ ПО ГОДАМ', 20, currentY);
     currentY += 10;
     
+    // Выбираем ключевые годы для отображения
     const keyYears = [0, 1, 5, 10, 20, 30, 50, inputs.projectYears].filter(y => y <= inputs.projectYears);
     
+    // Таблица денежных потоков
     const cashFlowTableData = keyYears.map(year => [
       year.toString(),
       formatNumberGOST(results.cashFlows[year] / 1000),
@@ -236,16 +258,19 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
       styles: { 
         fontSize: 8, 
         cellPadding: 3,
-        font: 'helvetica'
+        font: 'helvetica',
+        fontStyle: 'normal'
       },
       headStyles: { 
         fillColor: [158, 158, 158],
         textColor: 255,
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        font: 'helvetica'
       },
       margin: { left: 20, right: 20 }
     });
     
+    // Таблица углеродных единиц
     currentY = doc.lastAutoTable.finalY + 10;
     
     const carbonTableData = keyYears.map(year => [
@@ -262,16 +287,19 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
       styles: { 
         fontSize: 8, 
         cellPadding: 3,
-        font: 'helvetica'
+        font: 'helvetica',
+        fontStyle: 'normal'
       },
       headStyles: { 
         fillColor: [121, 85, 72],
         textColor: 255,
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        font: 'helvetica'
       },
       margin: { left: 20, right: 20 }
     });
     
+    // === ЗАКЛЮЧЕНИЕ ===
     currentY = doc.lastAutoTable.finalY + 15;
     
     if (currentY > 200) {
@@ -311,11 +339,13 @@ export async function exportToPdf(results, inputs, chartRefs = {}) {
       currentY += 5;
     });
     
+    // Футер на последней странице
     const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : currentY + 10;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
     doc.text('Отчет сгенерирован автоматически. Данные носят информационный характер.', pageWidth / 2, finalY < 280 ? finalY : 280, { align: 'center' });
     
+    // Сохранение с именем по ГОСТ
     const fileName = `Расчет_лесного_проекта_${inputs.treeType}_${inputs.areaHa}га_${formatDateGOST()}.pdf`;
     doc.save(fileName);
     
