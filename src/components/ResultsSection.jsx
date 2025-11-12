@@ -1,5 +1,3 @@
-[file name]: ResultsSection.jsx
-[file content begin]
 import React, { useRef, useEffect } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { 
@@ -411,4 +409,3 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     </div>
   );
 }
-[file content end]
