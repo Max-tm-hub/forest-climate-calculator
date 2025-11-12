@@ -28,6 +28,11 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
   const carbonChartRef = useRef();
 
   useEffect(() => {
+    console.log('Charts refs updated:', {
+      cashFlow: !!cashFlowChartRef.current,
+      carbon: !!carbonChartRef.current
+    });
+    
     if (results && onChartsReady && cashFlowChartRef.current && carbonChartRef.current) {
       onChartsReady({
         cashFlowChart: cashFlowChartRef.current,
