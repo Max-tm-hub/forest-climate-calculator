@@ -40,7 +40,6 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
 
   if (!results) return null;
 
-  // Оптимизация: показываем только ключевые годы
   const getOptimizedYears = () => {
     const totalYears = inputs.projectYears + 1;
     
@@ -57,12 +56,10 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
 
   const optimizedYears = getOptimizedYears();
 
-  // Функция для нормализации данных (приведение к тысячам/миллионам)
   const normalizeData = (data, divisor = 1000) => {
     return data.map(value => value / divisor);
   };
 
-  // Получаем максимальное и минимальное значения для настройки масштаба
   const getYAxisBounds = (data) => {
     const values = data.filter(val => val !== null && val !== undefined);
     if (values.length === 0) return { min: 0, max: 100 };
@@ -70,9 +67,8 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     const maxVal = Math.max(...values);
     const minVal = Math.min(...values);
     
-    // УВЕЛИЧИВАЕМ ДИАПАЗОН В 3 РАЗА ДЛЯ ЛУЧШЕЙ ЧИТАЕМОСТИ
     const range = maxVal - minVal;
-    const padding = range * 0.3; // Увеличено с 10% до 30%
+    const padding = range * 0.3;
     
     return {
       min: minVal - padding,
@@ -80,7 +76,6 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     };
   };
 
-  // Данные для графика углеродных единиц (в тысячах тонн)
   const carbonDataValues = optimizedYears.map(i => {
     return results.carbonUnits.slice(0, i + 1).reduce((sum, value) => sum + value, 0) / 1000;
   });
@@ -102,7 +97,6 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     }]
   };
 
-  // Данные для графика денежных потоков (в миллионах рублей)
   const cashFlowValues = normalizeData(optimizedYears.map(i => results.cashFlows[i]), 1000000);
   const discountedFlowValues = normalizeData(optimizedYears.map(i => results.discountedCashFlows[i]), 1000000);
 
@@ -134,11 +128,9 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     ]
   };
 
-  // Получаем границы для осей Y (УВЕЛИЧЕННЫЕ В 3 РАЗА)
   const cashFlowBounds = getYAxisBounds([...cashFlowValues, ...discountedFlowValues]);
   const carbonBounds = getYAxisBounds(carbonDataValues);
 
-  // Настройки для графика денежных потоков
   const cashFlowChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -210,7 +202,6 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
             weight: 'bold'
           }
         },
-        // УВЕЛИЧИВАЕМ МАСШТАБ ОСИ Y В 3 РАЗА
         min: cashFlowBounds.min,
         max: cashFlowBounds.max,
         ticks: {
@@ -233,7 +224,6 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     }
   };
 
-  // Настройки для графика углеродных единиц
   const carbonChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -304,7 +294,6 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
             weight: 'bold'
           }
         },
-        // УВЕЛИЧИВАЕМ МАСШТАБ ОСИ Y В 3 РАЗА
         min: carbonBounds.min,
         max: carbonBounds.max,
         ticks: {
@@ -336,7 +325,6 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     <div style={{ marginTop: '20px' }}>
       <h3 style={{ color: '#2e7d32', marginBottom: '15px', fontSize: '1.3em' }}>Результаты расчёта</h3>
       
-      {/* Компактная сетка показателей */}
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
@@ -358,7 +346,6 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
         ))}
       </div>
 
-      {/* Компактные графики в одной колонке */}
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column',
@@ -366,13 +353,12 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
         marginBottom: '15px'
       }}>
         
-        {/* График денежных потоков */}
         <div style={{ 
           backgroundColor: 'white', 
           padding: '12px', 
           borderRadius: '6px',
           boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-          height: '400px' // Увеличена высота контейнера
+          height: '400px'
         }}>
           <h5 style={{ 
             textAlign: 'center', 
@@ -383,18 +369,17 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           }}>
             Денежные потоки
           </h5>
-          <div ref={cashFlowChartRef} style={{ height: '350px' }}> {/* Увеличена высота графика */}
+          <div ref={cashFlowChartRef} style={{ height: '350px' }}>
             <Bar data={cashFlowData} options={cashFlowChartOptions} />
           </div>
         </div>
 
-        {/* График углеродных единиц */}
         <div style={{ 
           backgroundColor: 'white', 
           padding: '12px', 
           borderRadius: '6px',
           boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-          height: '400px' // Увеличена высота контейнера
+          height: '400px'
         }}>
           <h5 style={{ 
             textAlign: 'center', 
@@ -405,13 +390,12 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           }}>
             Накопленные углеродные единицы
           </h5>
-          <div ref={carbonChartRef} style={{ height: '350px' }}> {/* Увеличена высота графика */}
+          <div ref={carbonChartRef} style={{ height: '350px' }}>
             <Line data={carbonData} options={carbonChartOptions} />
           </div>
         </div>
       </div>
 
-      {/* Информация о масштабировании */}
       <div style={{
         fontSize: '0.7em',
         color: '#666',
