@@ -1,3 +1,5 @@
+[file name]: ResultsSection.jsx
+[file content begin]
 import React, { useRef, useEffect } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { 
@@ -24,11 +26,9 @@ ChartJS.register(
 );
 
 export default function ResultsSection({ results, inputs, onChartsReady }) {
-  // Refs для графиков должны быть объявлены ДО любого условного рендеринга
   const cashFlowChartRef = useRef();
   const carbonChartRef = useRef();
 
-  // useEffect должен быть объявлен ДО любого условного рендеринга
   useEffect(() => {
     if (results && onChartsReady && cashFlowChartRef.current && carbonChartRef.current) {
       onChartsReady({
@@ -70,9 +70,9 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     const maxVal = Math.max(...values);
     const minVal = Math.min(...values);
     
-    // Добавляем 10% от диапазона для отступов
+    // УВЕЛИЧИВАЕМ ДИАПАЗОН В 3 РАЗА ДЛЯ ЛУЧШЕЙ ЧИТАЕМОСТИ
     const range = maxVal - minVal;
-    const padding = range * 0.1;
+    const padding = range * 0.3; // Увеличено с 10% до 30%
     
     return {
       min: minVal - padding,
@@ -134,7 +134,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     ]
   };
 
-  // Получаем границы для осей Y
+  // Получаем границы для осей Y (УВЕЛИЧЕННЫЕ В 3 РАЗА)
   const cashFlowBounds = getYAxisBounds([...cashFlowValues, ...discountedFlowValues]);
   const carbonBounds = getYAxisBounds(carbonDataValues);
 
@@ -210,6 +210,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
             weight: 'bold'
           }
         },
+        // УВЕЛИЧИВАЕМ МАСШТАБ ОСИ Y В 3 РАЗА
         min: cashFlowBounds.min,
         max: cashFlowBounds.max,
         ticks: {
@@ -303,6 +304,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
             weight: 'bold'
           }
         },
+        // УВЕЛИЧИВАЕМ МАСШТАБ ОСИ Y В 3 РАЗА
         min: carbonBounds.min,
         max: carbonBounds.max,
         ticks: {
@@ -370,7 +372,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           padding: '12px', 
           borderRadius: '6px',
           boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-          height: '300px'
+          height: '400px' // Увеличена высота контейнера
         }}>
           <h5 style={{ 
             textAlign: 'center', 
@@ -381,7 +383,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           }}>
             Денежные потоки
           </h5>
-          <div ref={cashFlowChartRef}>
+          <div ref={cashFlowChartRef} style={{ height: '350px' }}> {/* Увеличена высота графика */}
             <Bar data={cashFlowData} options={cashFlowChartOptions} />
           </div>
         </div>
@@ -392,7 +394,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           padding: '12px', 
           borderRadius: '6px',
           boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-          height: '300px'
+          height: '400px' // Увеличена высота контейнера
         }}>
           <h5 style={{ 
             textAlign: 'center', 
@@ -403,7 +405,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           }}>
             Накопленные углеродные единицы
           </h5>
-          <div ref={carbonChartRef}>
+          <div ref={carbonChartRef} style={{ height: '350px' }}> {/* Увеличена высота графика */}
             <Line data={carbonData} options={carbonChartOptions} />
           </div>
         </div>
@@ -425,3 +427,4 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     </div>
   );
 }
+[file content end]
