@@ -65,7 +65,7 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       margin-bottom: 10pt;
     }
     table { 
-      width: 95%; 
+      width: 90%; 
       border-collapse: collapse; 
       margin: 12pt auto;
       table-layout: fixed;
@@ -90,14 +90,14 @@ function generateWordHTML(results, inputs, chartImages = {}) {
     }
     .section { 
       margin-bottom: 25pt; 
-      width: 95%;
+      width: 90%;
       margin-left: auto;
       margin-right: auto;
     }
     .chart-section {
       margin: 30pt 0;
       page-break-inside: avoid;
-      width: 95%;
+      width: 90%;
       margin-left: auto;
       margin-right: auto;
     }
@@ -114,8 +114,8 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       color: #2e7d32;
     }
     .chart-image {
-      max-width: 85%;
-      max-height: 12cm;
+      max-width: 75%;
+      max-height: 11cm;
       border: 1pt solid #ddd;
       display: block;
       margin: 0 auto;
@@ -151,8 +151,20 @@ function generateWordHTML(results, inputs, chartImages = {}) {
     }
     /* Контейнер для центрирования контента */
     .content-wrapper {
-      width: 95%;
+      width: 90%;
       margin: 0 auto;
+    }
+    .institution-name {
+      font-size: 14pt;
+      font-weight: bold;
+      margin-bottom: 10pt;
+      line-height: 1.3;
+    }
+    .program-name {
+      font-size: 13pt;
+      font-style: italic;
+      margin-bottom: 15pt;
+      color: #2e7d32;
     }
   </style>
 </head>
@@ -162,7 +174,13 @@ function generateWordHTML(results, inputs, chartImages = {}) {
 
   <!-- СТРАНИЦА 1: ТИТУЛЬНЫЙ ЛИСТ И ОСНОВНЫЕ ДАННЫЕ -->
   <div class="header">
-    <h1>МИНИСТЕРСТВО ПРИРОДНЫХ РЕСУРСОВ И ЭКОЛОГИИ РОССИЙСКОЙ ФЕДЕРАЦИИ</h1>
+    <div class="institution-name">
+      Федеральное государственное бюджетное образовательное учреждение высшего образования 
+      «Санкт-Петербургский государственный университет» (СПбГУ)
+    </div>
+    <div class="program-name">
+      ПИШ «Междисциплинарные исследования, технологии и бизнес-процессы для минерально-сырьевого комплекса России»
+    </div>
     <h2>ОТЧЁТ О РАСЧЁТЕ ЭФФЕКТИВНОСТИ ЛЕСНОГО КЛИМАТИЧЕСКОГО ПРОЕКТА</h2>
     <p style="font-size: 13pt; margin-top: 15pt;"><strong>Дата формирования:</strong> ${getCurrentDate()}</p>
   </div>
@@ -395,8 +413,8 @@ function chartToBase64(chartRef) {
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     
-    // Оптимальные размеры для Word документа (учитывая стандартные поля Word)
-    const targetWidth = 700; // меньше для учета полей Word
+    // Еще меньше для гарантии, что не вылезет за поля
+    const targetWidth = 600; 
     const scale = targetWidth / canvas.width;
     tempCanvas.width = targetWidth;
     tempCanvas.height = canvas.height * scale;
