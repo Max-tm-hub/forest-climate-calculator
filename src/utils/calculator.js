@@ -1,4 +1,4 @@
-import { CO2_INCREMENT } from '../data/co2Increment';
+import { getCO2IncrementData, isTreeTypeSupported } from '../data/co2Increment';
 
 // IRR (метод Ньютона)
 export function calculateIRR(cashFlows, guess = 0.1) {
@@ -36,6 +36,15 @@ export function calculateProject(params) {
     profitTaxRate = 0.25
   } = params;
 
+  // Проверяем поддержку породы деревьев
+  if (!isTreeTypeSupported(treeType)) {
+    const supportedTypes = getSupportedTreeTypes();
+    throw new Error(
+      `Порода "${treeType}" не поддерживается. ` +
+      `Доступные породы: ${supportedTypes.join(', ')}`
+    );
+  }
+
   // === 1. Инвестиции ===
   const landCost = landPrice;
   const prepCost = prepPerHa * areaHa;
@@ -48,7 +57,7 @@ export function calculateProject(params) {
   const annualDepreciation = projectYears > 0 ? depreciableInvestment / projectYears : 0;
 
   // === 2. Данные по приросту CO₂ (ключевая часть!) ===
-  const incrementProfile = CO2_INCREMENT[treeType];
+  const incrementProfile = getCO2IncrementData(treeType);
   if (!incrementProfile || incrementProfile.length < projectYears + 1) {
     throw new Error(`Недостаточно данных для породы "${treeType}". Требуется ${projectYears + 1} значений.`);
   }
