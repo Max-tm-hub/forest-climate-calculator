@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { 
   Chart as ChartJS, 
@@ -24,25 +24,51 @@ ChartJS.register(
 );
 
 export default function ResultsSection({ results, inputs, onChartsReady }) {
-  const cashFlowChartRef = useRef();
-  const carbonChartRef = useRef();
+  const cashFlowChartRef = useRef(null);
+  const carbonChartRef = useRef(null);
+  const chartsReadyRef = useRef(false);
+
+  // Стабильная функция для уведомления о готовности графиков
+  const notifyChartsReady = useCallback(() => {
+    if (results && onChartsReady && cashFlowChartRef.current && carbonChartRef.current && !chartsReadyRef.current) {
+      console.log('All charts are ready, notifying parent...', {
+        cashFlow: !!cashFlowChartRef.current,
+        carbon: !!carbonChartRef.current,
+        cashFlowCanvas: cashFlowChartRef.current?.canvas,
+        carbonCanvas: carbonChartRef.current?.canvas
+      });
+      
+      chartsReadyRef.current = true;
+      
+      // Даем время на полный рендеринг графиков
+      setTimeout(() => {
+        onChartsReady({
+          cashFlowChart: cashFlowChartRef.current,
+          carbonChart: carbonChartRef.current
+        });
+      }, 1500);
+    }
+  }, [onChartsReady, results]);
 
   useEffect(() => {
-  console.log('Charts refs updated:', {
-    cashFlow: !!cashFlowChartRef.current,
-    carbon: !!carbonChartRef.current
-  });
-  
-  if (results && onChartsReady && cashFlowChartRef.current && carbonChartRef.current) {
-    // Даем время на полный рендеринг графиков
-    setTimeout(() => {
-      onChartsReady({
-        cashFlowChart: cashFlowChartRef.current,
-        carbonChart: carbonChartRef.current
-      });
-    }, 1000);
-  }
-}, [onChartsReady, results]);
+    // Сбрасываем флаг при новом расчете
+    if (results) {
+      chartsReadyRef.current = false;
+    }
+  }, [results]);
+
+  useEffect(() => {
+    // Проверяем готовность графиков при каждом обновлении refs
+    if (cashFlowChartRef.current && carbonChartRef.current) {
+      const cashFlowCanvas = cashFlowChartRef.current.canvas;
+      const carbonCanvas = carbonChartRef.current.canvas;
+      
+      if (cashFlowCanvas && carbonCanvas && 
+          cashFlowCanvas.width > 0 && carbonCanvas.width > 0) {
+        notifyChartsReady();
+      }
+    }
+  }, [notifyChartsReady]);
 
   if (!results) return null;
 
@@ -375,8 +401,13 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           }}>
             Денежные потоки
           </h5>
-          <div ref={cashFlowChartRef} style={{ height: '350px' }}>
-            <Bar data={cashFlowData} options={cashFlowChartOptions} />
+          <div style={{ height: '350px' }}>
+            <Bar 
+              ref={cashFlowChartRef}
+              data={cashFlowData} 
+              options={cashFlowChartOptions} 
+              redraw={false}
+            />
           </div>
         </div>
 
@@ -396,8 +427,13 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           }}>
             Накопленные углеродные единицы
           </h5>
-          <div ref={carbonChartRef} style={{ height: '350px' }}>
-            <Line data={carbonData} options={carbonChartOptions} />
+          <div style={{ height: '350px' }}>
+            <Line 
+              ref={carbonChartRef}
+              data={carbonData} 
+              options={carbonChartOptions} 
+              redraw={false}
+            />
           </div>
         </div>
       </div>
