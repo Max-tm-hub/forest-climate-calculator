@@ -22,7 +22,7 @@ export function calculateIRR(cashFlows, guess = 0.1) {
 export function calculateProject(params) {
   const {
     treeType, areaHa, projectYears = 80,
-    discountRate = 0.23, inflation = 0.025,
+    discountRate = 0.23, inflation = 0.03,
     landPrice = 500000, prepPerHa = 20000,
     seedlingsPerHa = 1300, seedlingCost = 120,
     plantingCostPerHa = 10000, pestsInitialPerHa = 8000,
