@@ -34,57 +34,182 @@ function generateWordHTML(results, inputs, chartImages = {}) {
   <meta charset="UTF-8">
   <title>Отчет по лесному климатическому проекту</title>
   <style>
-    body { font-family: 'Times New Roman', serif; font-size: 12pt; margin: 2cm; }
-    h1 { color: #2e7d32; text-align: center; font-size: 16pt; }
-    h2 { color: #1976d2; font-size: 14pt; margin-top: 20pt; }
-    h3 { color: #d32f2f; font-size: 13pt; margin-top: 15pt; }
-    table { width: 100%; border-collapse: collapse; margin: 10pt 0; }
-    th, td { border: 1pt solid #000; padding: 6pt; text-align: left; }
-    th { background-color: #f2f2f2; font-weight: bold; }
-    .header { text-align: center; margin-bottom: 30pt; }
-    .section { margin-bottom: 20pt; }
-    .chart-container { text-align: center; margin: 15pt 0; }
-    .chart-title { font-weight: bold; margin-bottom: 8pt; }
+    /* Сброс стандартных отступов Word */
+    body { 
+      font-family: 'Times New Roman', serif; 
+      font-size: 12pt; 
+      margin: 0;
+      padding: 0;
+    }
+    /* Настройка области печати - соответствует стандартным полям Word */
+    @page {
+      margin: 2cm 1.5cm 2cm 2cm; /* верх, право, низ, лево - стандартные поля Word */
+    }
+    h1 { 
+      color: #2e7d32; 
+      text-align: center; 
+      font-size: 16pt; 
+      margin-top: 0;
+      margin-bottom: 10pt;
+    }
+    h2 { 
+      color: #1976d2; 
+      font-size: 14pt; 
+      margin-top: 20pt; 
+      margin-bottom: 10pt;
+    }
+    h3 { 
+      color: #d32f2f; 
+      font-size: 13pt; 
+      margin-top: 15pt; 
+      margin-bottom: 8pt;
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin: 10pt 0;
+      table-layout: fixed; /* Фиксированная ширина колонок */
+    }
+    th, td { 
+      border: 1pt solid #000; 
+      padding: 4pt; 
+      text-align: left;
+      word-wrap: break-word; /* Перенос длинного текста */
+      font-size: 10pt; /* Уменьшаем шрифт для таблиц */
+    }
+    th { 
+      background-color: #f2f2f2; 
+      font-weight: bold; 
+    }
+    .header { 
+      text-align: center; 
+      margin-bottom: 30pt; 
+    }
+    .section { 
+      margin-bottom: 20pt; 
+    }
+    .chart-container { 
+      text-align: center; 
+      margin: 15pt 0; 
+      page-break-inside: avoid; /* Не разрывать страницу внутри графика */
+    }
+    .chart-title { 
+      font-weight: bold; 
+      margin-bottom: 8pt; 
+      font-size: 11pt;
+    }
+    .chart-image {
+      max-width: 100%;
+      height: auto;
+      border: 1pt solid #ddd;
+    }
+    /* Узкие колонки для таблиц */
+    .col-year { width: 8%; }
+    .col-number { width: 20%; }
+    .col-medium { width: 30%; }
+    .col-large { width: 42%; }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>МИНИСТЕРСТВО ПРИРОДНЫХ РЕСУРСОВ И ЭКОЛОГИИ РОССИЙСКОЙ ФЕДЕРАЦИИ</h1>
     <h2>ОТЧЁТ О РАСЧЁТЕ ЭФФЕКТИВНОСТИ ЛЕСНОГО КЛИМАТИЧЕСКОГО ПРОЕКТА</h2>
-    <p>Дата формирования: ${getCurrentDate()}</p>
+    <p><strong>Дата формирования:</strong> ${getCurrentDate()}</p>
   </div>
 
   <div class="section">
     <h2>1. ПАРАМЕТРЫ ПРОЕКТА</h2>
     <table>
-      <tr><th width="70%">Параметр</th><th width="30%">Значение</th></tr>
-      <tr><td>Порода деревьев</td><td>${safeText(inputs.treeType)}</td></tr>
-      <tr><td>Площадь проекта</td><td>${inputs.areaHa} га</td></tr>
-      <tr><td>Срок реализации</td><td>${inputs.projectYears} лет</td></tr>
-      <tr><td>Ставка дисконтирования</td><td>${(inputs.discountRate * 100).toFixed(1)}%</td></tr>
-      <tr><td>Уровень инфляции</td><td>${(inputs.inflation * 100).toFixed(1)}%</td></tr>
-      <tr><td>Цена углеродной единицы</td><td>${formatNumber(inputs.carbonUnitPrice)} руб/т</td></tr>
-      <tr><td>Цена древесины</td><td>${formatNumber(inputs.timberPrice)} руб/м³</td></tr>
+      <colgroup>
+        <col class="col-large">
+        <col class="col-medium">
+      </colgroup>
+      <tr>
+        <th>Параметр</th>
+        <th>Значение</th>
+      </tr>
+      <tr>
+        <td>Порода деревьев</td>
+        <td>${safeText(inputs.treeType)}</td>
+      </tr>
+      <tr>
+        <td>Площадь проекта</td>
+        <td>${inputs.areaHa} га</td>
+      </tr>
+      <tr>
+        <td>Срок реализации</td>
+        <td>${inputs.projectYears} лет</td>
+      </tr>
+      <tr>
+        <td>Ставка дисконтирования</td>
+        <td>${(inputs.discountRate * 100).toFixed(1)}%</td>
+      </tr>
+      <tr>
+        <td>Уровень инфляции</td>
+        <td>${(inputs.inflation * 100).toFixed(1)}%</td>
+      </tr>
+      <tr>
+        <td>Цена углеродной единицы</td>
+        <td>${formatNumber(inputs.carbonUnitPrice)} руб/т</td>
+      </tr>
+      <tr>
+        <td>Цена древесины</td>
+        <td>${formatNumber(inputs.timberPrice)} руб/м³</td>
+      </tr>
     </table>
   </div>
 
   <div class="section">
     <h2>2. ФИНАНСОВЫЕ ПОКАЗАТЕЛИ</h2>
     <table>
-      <tr><th width="70%">Показатель</th><th width="30%">Значение</th></tr>
-      <tr><td>NPV (чистая приведенная стоимость)</td><td>${formatNumber(results.financials.npv)} руб</td></tr>
-      <tr><td>IRR (внутренняя норма доходности)</td><td>${safeText(results.financials.irr)}</td></tr>
-      <tr><td>Срок окупаемости (простой)</td><td>${safeText(results.financials.simplePayback)} лет</td></tr>
-      <tr><td>Срок окупаемости (дисконтированный)</td><td>${safeText(results.financials.discountedPayback)} лет</td></tr>
-      <tr><td>Себестоимость углеродной единицы</td><td>${formatNumber(results.financials.cuCost)} руб/т</td></tr>
-      <tr><td>ROI (рентабельность инвестиций)</td><td>${safeText(results.financials.roi)}</td></tr>
-      <tr><td>Индекс доходности</td><td>${safeText(results.financials.profitabilityIndex)}</td></tr>
+      <colgroup>
+        <col class="col-large">
+        <col class="col-medium">
+      </colgroup>
+      <tr>
+        <th>Показатель</th>
+        <th>Значение</th>
+      </tr>
+      <tr>
+        <td>NPV (чистая приведенная стоимость)</td>
+        <td>${formatNumber(results.financials.npv)} руб</td>
+      </tr>
+      <tr>
+        <td>IRR (внутренняя норма доходности)</td>
+        <td>${safeText(results.financials.irr)}</td>
+      </tr>
+      <tr>
+        <td>Срок окупаемости (простой)</td>
+        <td>${safeText(results.financials.simplePayback)} лет</td>
+      </tr>
+      <tr>
+        <td>Срок окупаемости (дисконтированный)</td>
+        <td>${safeText(results.financials.discountedPayback)} лет</td>
+      </tr>
+      <tr>
+        <td>Себестоимость углеродной единицы</td>
+        <td>${formatNumber(results.financials.cuCost)} руб/т</td>
+      </tr>
+      <tr>
+        <td>ROI (рентабельность инвестиций)</td>
+        <td>${safeText(results.financials.roi)}</td>
+      </tr>
+      <tr>
+        <td>Индекс доходности</td>
+        <td>${safeText(results.financials.profitabilityIndex)}</td>
+      </tr>
     </table>
   </div>
 
   <div class="section">
     <h2>3. СВОДНЫЕ ДАННЫЕ ПО ГОДАМ</h2>
     <table>
+      <colgroup>
+        <col class="col-year">
+        <col class="col-number">
+        <col class="col-number">
+        <col class="col-number">
+      </colgroup>
       <tr>
         <th>Год</th>
         <th>УЕ (т CO₂)</th>
@@ -102,23 +227,25 @@ function generateWordHTML(results, inputs, chartImages = {}) {
     </table>
   </div>
 
-  ${chartImages.cashFlowChart ? `
+  ${chartImages.cashFlowChart || chartImages.carbonChart ? `
   <div class="section">
     <h2>4. ГРАФИЧЕСКАЯ ВИЗУАЛИЗАЦИЯ</h2>
     
+    ${chartImages.cashFlowChart ? `
     <div class="chart-container">
       <div class="chart-title">Динамика денежных потоков</div>
-      <img src="${chartImages.cashFlowChart}" alt="График денежных потоков" style="max-width: 100%; height: auto;" />
+      <img src="${chartImages.cashFlowChart}" alt="График денежных потоков" class="chart-image" />
       <p><em>Денежные потоки показаны в миллионах рублей</em></p>
     </div>
+    ` : '<p>График денежных потоков недоступен</p>'}
 
     ${chartImages.carbonChart ? `
     <div class="chart-container">
       <div class="chart-title">Динамика накопленных углеродных единиц</div>
-      <img src="${chartImages.carbonChart}" alt="График углеродных единиц" style="max-width: 100%; height: auto;" />
+      <img src="${chartImages.carbonChart}" alt="График углеродных единиц" class="chart-image" />
       <p><em>Углеродные единицы показаны в тысячах тонн CO₂</em></p>
     </div>
-    ` : ''}
+    ` : '<p>График углеродных единиц недоступен</p>'}
   </div>
   ` : ''}
 
@@ -168,13 +295,44 @@ function generateConclusion(results, inputs) {
   return conclusion;
 }
 
-// Функция для конвертации графика в base64
+// Улучшенная функция для конвертации графика в base64 с увеличенным разрешением
 function chartToBase64(chartRef) {
-  if (!chartRef || !chartRef.canvas) return null;
+  if (!chartRef || !chartRef.canvas) {
+    console.error('Chart reference or canvas is missing');
+    return null;
+  }
   
   try {
     const canvas = chartRef.canvas;
-    return canvas.toDataURL('image/png');
+    
+    // Проверяем, что canvas имеет содержимое
+    if (canvas.width === 0 || canvas.height === 0) {
+      console.error('Canvas has zero dimensions');
+      return null;
+    }
+    
+    // Создаем временный canvas с увеличенным разрешением для лучшего качества
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    const scale = 2; // Увеличиваем разрешение в 2 раза
+    tempCanvas.width = canvas.width * scale;
+    tempCanvas.height = canvas.height * scale;
+    
+    // Настраиваем сглаживание для лучшего качества
+    tempCtx.scale(scale, scale);
+    tempCtx.imageSmoothingEnabled = true;
+    tempCtx.imageSmoothingQuality = 'high';
+    
+    // Копируем содержимое с белым фоном
+    tempCtx.fillStyle = '#FFFFFF';
+    tempCtx.fillRect(0, 0, canvas.width, canvas.height);
+    tempCtx.drawImage(canvas, 0, 0);
+    
+    const dataUrl = tempCanvas.toDataURL('image/png', 1.0);
+    console.log('Chart converted to base64 successfully, size:', dataUrl.length);
+    return dataUrl;
+    
   } catch (error) {
     console.error('Error converting chart to base64:', error);
     return null;
@@ -186,26 +344,35 @@ export async function exportToWord(results, inputs, chartRefs = {}) {
   try {
     console.log('Starting Word export...', {
       hasCashFlowChart: !!chartRefs.cashFlowChart,
-      hasCarbonChart: !!chartRefs.carbonChart
+      hasCarbonChart: !!chartRefs.carbonChart,
+      cashFlowChart: chartRefs.cashFlowChart,
+      carbonChart: chartRefs.carbonChart
     });
+
+    // Даем время на полную отрисовку графиков
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Конвертируем графики в base64
     const chartImages = {};
     
     if (chartRefs.cashFlowChart) {
+      console.log('Converting cash flow chart...');
       chartImages.cashFlowChart = chartToBase64(chartRefs.cashFlowChart);
+      console.log('Cash flow chart converted:', !!chartImages.cashFlowChart);
     }
     
     if (chartRefs.carbonChart) {
+      console.log('Converting carbon chart...');
       chartImages.carbonChart = chartToBase64(chartRefs.carbonChart);
+      console.log('Carbon chart converted:', !!chartImages.carbonChart);
     }
 
     // Генерируем HTML контент
     const htmlContent = generateWordHTML(results, inputs, chartImages);
 
     // Создаем Blob с HTML контентом
-    const blob = new Blob([htmlContent], { 
-      type: 'application/msword' 
+    const blob = new Blob(['\uFEFF' + htmlContent], { 
+      type: 'application/msword;charset=utf-8'
     });
 
     // Сохраняем файл
