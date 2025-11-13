@@ -114,8 +114,8 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       color: #2e7d32;
     }
     .chart-image {
-      max-width: 70%;
-      max-height: 13cm;
+      max-width: 75%;
+      max-height: 11cm;
       border: 1pt solid #ddd;
       display: block;
       margin: 0 auto;
@@ -385,7 +385,7 @@ function generateConclusion(results, inputs) {
   return conclusion;
 }
 
-// Улучшенная функция для конвертации графика в base64 с повышенной резкостью текста
+// Улучшенная функция для конвертации графика в base64 с правильными размерами
 function chartToBase64(chartRef) {
   if (!chartRef || !chartRef.canvas) {
     console.error('Chart reference or canvas is missing');
@@ -413,12 +413,12 @@ function chartToBase64(chartRef) {
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     
-    // Увеличиваем разрешение в 3 раза для лучшего качества текста
-    const scale = 3;
+    // Увеличиваем разрешение в 2 раза для лучшего качества текста
+    const scale = 2;
     tempCanvas.width = canvas.width * scale;
     tempCanvas.height = canvas.height * scale;
     
-    // Отключаем сглаживание для текста - это ключевое изменение!
+    // Отключаем сглаживание для текста
     tempCtx.imageSmoothingEnabled = false;
     tempCtx.textRendering = 'geometricPrecision';
     
@@ -430,12 +430,12 @@ function chartToBase64(chartRef) {
     tempCtx.scale(scale, scale);
     tempCtx.drawImage(canvas, 0, 0);
     
-    // Теперь уменьшаем до нужного размера с лучшим качеством
+    // Теперь уменьшаем до правильного размера для Word
     const finalCanvas = document.createElement('canvas');
     const finalCtx = finalCanvas.getContext('2d');
     
-    // Финальный размер для Word (увеличили для лучшего качества)
-    const targetWidth = 800;
+    // Правильный размер для Word - 650px
+    const targetWidth = 650;
     const finalScale = targetWidth / tempCanvas.width;
     finalCanvas.width = targetWidth;
     finalCanvas.height = tempCanvas.height * finalScale;
@@ -445,8 +445,8 @@ function chartToBase64(chartRef) {
     finalCtx.imageSmoothingQuality = 'high';
     finalCtx.drawImage(tempCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
     
-    const dataUrl = finalCanvas.toDataURL('image/png', 1.0); // Максимальное качество
-    console.log('Chart converted to base64 with high quality text');
+    const dataUrl = finalCanvas.toDataURL('image/png', 1.0);
+    console.log('Chart converted to base64 with correct dimensions');
     return dataUrl;
     
   } catch (error) {
