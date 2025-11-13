@@ -1,3 +1,4 @@
+// App.jsx
 import React, { useState, useRef } from 'react';
 import CalculatorForm from './components/CalculatorForm';
 import ResultsSection from './components/ResultsSection';
@@ -49,9 +50,9 @@ function App() {
   };
 
   const tabs = [
-    { id: 'calculator', label: '🧮 Калькулятор', icon: '🧮' },
-    { id: 'sensitivity', label: '📈 Анализ чувствительности', icon: '📈' },
-    { id: 'comparison', label: '⚖️ Сравнение сценариев', icon: '⚖️' }
+    { id: 'calculator', label: 'Калькулятор', icon: '🧮' },
+    { id: 'sensitivity', label: 'Анализ чувствительности', icon: '📈' },
+    { id: 'comparison', label: 'Сравнение сценариев', icon: '⚖️' }
   ];
 
   return (
