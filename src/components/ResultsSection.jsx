@@ -28,18 +28,21 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
   const carbonChartRef = useRef();
 
   useEffect(() => {
-    console.log('Charts refs updated:', {
-      cashFlow: !!cashFlowChartRef.current,
-      carbon: !!carbonChartRef.current
-    });
-    
-    if (results && onChartsReady && cashFlowChartRef.current && carbonChartRef.current) {
+  console.log('Charts refs updated:', {
+    cashFlow: !!cashFlowChartRef.current,
+    carbon: !!carbonChartRef.current
+  });
+  
+  if (results && onChartsReady && cashFlowChartRef.current && carbonChartRef.current) {
+    // Даем время на полный рендеринг графиков
+    setTimeout(() => {
       onChartsReady({
         cashFlowChart: cashFlowChartRef.current,
         carbonChart: carbonChartRef.current
       });
-    }
-  }, [onChartsReady, results]);
+    }, 1000);
+  }
+}, [onChartsReady, results]);
 
   if (!results) return null;
 
