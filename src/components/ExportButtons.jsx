@@ -11,19 +11,43 @@ export default function ExportButtons({ results, inputs, chartRefs }) {
     }
   };
 
-  const handleExportWord = () => {
+  const handleExportWord = async () => {
     if (!results) {
       alert('Сначала выполните расчет');
       return;
     }
 
+    // Проверяем наличие ссылок на графики
     if (!chartRefs.cashFlowChart || !chartRefs.carbonChart) {
-      alert('Графики еще не готовы. Подождите несколько секунд и попробуйте снова.');
+      alert('Графики еще не готовы. Подождите несколько секунд после расчета и попробуйте снова.');
       return;
     }
 
-    console.log('Starting Word export with chart refs:', chartRefs);
-    exportToWord(results, inputs, chartRefs);
+    // Дополнительная проверка, что canvas графиков действительно отрисованы
+    const cashFlowCanvas = chartRefs.cashFlowChart.canvas;
+    const carbonCanvas = chartRefs.carbonChart.canvas;
+    
+    if (!cashFlowCanvas || !carbonCanvas) {
+      alert('Графики не инициализированы. Перезагрузите страницу и попробуйте снова.');
+      return;
+    }
+
+    if (cashFlowCanvas.width === 0 || carbonCanvas.width === 0) {
+      alert('Графики еще не отрисованы. Подождите немного и попробуйте снова.');
+      return;
+    }
+
+    console.log('Starting Word export with verified chart refs:', {
+      cashFlowWidth: cashFlowCanvas.width,
+      carbonWidth: carbonCanvas.width
+    });
+
+    try {
+      await exportToWord(results, inputs, chartRefs);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Ошибка при экспорте: ' + error.message);
+    }
   };
 
   return (
