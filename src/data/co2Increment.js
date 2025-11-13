@@ -20,7 +20,7 @@ export const CO2_INCREMENT = {
     40.85, 40.85, 40.85, 40.85, 40.85, 40.85, 40.85, 40.86, 40.85, 40.85,
     19.4, 19.41, 19.4, 19.41, 19.4, 19.41, 19.4, 19.41, 19.4, 19.41
   ],
-  "Сосна": [
+  "Сосна": [ // ИСПРАВЛЕН КЛЮЧ - было "Сосна обыкновенная"
     0, 0.14, 0.14, 0.14, 0.14, 0.14, 0.13, 0.14, 0.14, 0.14,
     0.14, 6.92, 6.93, 6.92, 6.92, 6.93, 6.92, 6.92, 6.92, 6.93,
     6.92, 6.92, 6.93, 6.92, 6.92, 6.92, 6.93, 6.92, 6.92, 6.93,
@@ -82,4 +82,26 @@ export const CO2_INCREMENT = {
   ]
 };
 
-export const TREE_TYPES = Object.keys(CO2_INCREMENT);
+// Функция для проверки доступности данных по породе
+export const isTreeTypeSupported = (treeType) => {
+  return CO2_INCREMENT.hasOwnProperty(treeType);
+};
+
+// Функция для получения списка поддерживаемых пород
+export const getSupportedTreeTypes = () => {
+  return Object.keys(CO2_INCREMENT);
+};
+
+// Функция для безопасного получения данных по породе
+export const getCO2IncrementData = (treeType) => {
+  if (!isTreeTypeSupported(treeType)) {
+    const supportedTypes = getSupportedTreeTypes();
+    throw new Error(
+      `Порода "${treeType}" не поддерживается. ` +
+      `Доступные породы: ${supportedTypes.join(', ')}`
+    );
+  }
+  return CO2_INCREMENT[treeType];
+};
+
+export const TREE_TYPES = getSupportedTreeTypes();
