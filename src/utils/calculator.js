@@ -36,13 +36,29 @@ export function calculateProject(params) {
     profitTaxRate = 0.25
   } = params;
 
-  // Проверяем поддержку породы деревьев
+  // Проверяем корректность параметров
+  if (!treeType) {
+    throw new Error('Не выбрана порода деревьев');
+  }
+  
   if (!isTreeTypeSupported(treeType)) {
     const supportedTypes = getSupportedTreeTypes();
     throw new Error(
       `Порода "${treeType}" не поддерживается. ` +
       `Доступные породы: ${supportedTypes.join(', ')}`
     );
+  }
+
+  if (inflation < 0 || inflation > 1) {
+    throw new Error('Уровень инфляции должен быть между 0 и 1 (0% - 100%)');
+  }
+
+  if (discountRate < 0 || discountRate > 1) {
+    throw new Error('Ставка дисконтирования должна быть между 0 и 1 (0% - 100%)');
+  }
+
+  if (projectYears < 1 || projectYears > 100) {
+    throw new Error('Срок проекта должен быть от 1 до 100 лет');
   }
 
   // === 1. Инвестиции ===
@@ -57,10 +73,9 @@ export function calculateProject(params) {
   const annualDepreciation = projectYears > 0 ? depreciableInvestment / projectYears : 0;
 
   // === 2. Данные по приросту CO₂ (ключевая часть!) ===
-  const incrementProfile = getCO2IncrementData(treeType);
-  if (!incrementProfile || incrementProfile.length < projectYears + 1) {
-    throw new Error(`Недостаточно данных для породы "${treeType}". Требуется ${projectYears + 1} значений.`);
-  }
+  // Получаем данные для нужного количества лет (projectYears + 1, т.к. включаем год 0)
+  const requiredYears = projectYears + 1;
+  const incrementProfile = getCO2IncrementData(treeType, requiredYears);
 
   const years = Array.from({ length: projectYears + 1 }, (_, i) => i);
   const inflationFactor = years.map(y => Math.pow(1 + inflation, y));
