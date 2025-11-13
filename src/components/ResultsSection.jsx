@@ -171,23 +171,24 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
         position: 'top',
         labels: {
           usePointStyle: true,
-          padding: 8,
+          padding: 12,
           font: {
-            size: 11
+            size: 14,
+            weight: 'bold'
           },
-          boxWidth: 10
+          boxWidth: 12
         }
       },
       tooltip: {
         mode: 'index',
         intersect: false,
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        padding: 6,
+        padding: 8,
         titleFont: {
-          size: 10
+          size: 12
         },
         bodyFont: {
-          size: 10
+          size: 12
         },
         displayColors: true,
         callbacks: {
@@ -210,7 +211,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           display: true,
           text: 'Год проекта',
           font: {
-            size: 11,
+            size: 13,
             weight: 'bold'
           }
         },
@@ -221,7 +222,8 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           maxRotation: 45,
           minRotation: 0,
           font: {
-            size: 9
+            size: 11,
+            weight: 'bold'
           }
         }
       },
@@ -230,7 +232,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           display: true,
           text: 'Млн рублей',
           font: {
-            size: 11,
+            size: 13,
             weight: 'bold'
           }
         },
@@ -238,7 +240,8 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
         max: cashFlowBounds.max,
         ticks: {
           font: {
-            size: 9
+            size: 11,
+            weight: 'bold'
           },
           callback: function(value) {
             return value.toFixed(1) + 'M';
@@ -264,23 +267,24 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
         position: 'top',
         labels: {
           usePointStyle: true,
-          padding: 8,
+          padding: 12,
           font: {
-            size: 11
+            size: 14,
+            weight: 'bold'
           },
-          boxWidth: 10
+          boxWidth: 12
         }
       },
       tooltip: {
         mode: 'nearest',
         intersect: true,
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        padding: 6,
+        padding: 8,
         titleFont: {
-          size: 10
+          size: 12
         },
         bodyFont: {
-          size: 10
+          size: 12
         },
         callbacks: {
           label: function(context) {
@@ -302,7 +306,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           display: true,
           text: 'Год проекта',
           font: {
-            size: 11,
+            size: 13,
             weight: 'bold'
           }
         },
@@ -313,7 +317,8 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           maxRotation: 45,
           minRotation: 0,
           font: {
-            size: 9
+            size: 11,
+            weight: 'bold'
           }
         }
       },
@@ -322,7 +327,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
           display: true,
           text: 'Тыс. тонн CO₂',
           font: {
-            size: 11,
+            size: 13,
             weight: 'bold'
           }
         },
@@ -330,7 +335,8 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
         max: carbonBounds.max,
         ticks: {
           font: {
-            size: 9
+            size: 11,
+            weight: 'bold'
           },
           callback: function(value) {
             return value.toFixed(0) + 'K';
