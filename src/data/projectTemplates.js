@@ -1,10 +1,10 @@
-// Шаблоны предустановленных конфигураций проектов
+// Шаблоны предустановленных конфигураций проектов с учетом реальных данных
 export const projectTemplates = {
   boreal: {
     name: "Бореальный лес (Сосна)",
     treeType: "Сосна",
     areaHa: 1000,
-    projectYears: 80,
+    projectYears: 80, // Оптимальный срок для сосны
     discountRate: 0.23,
     inflation: 0.025,
     landPrice: 500000,
@@ -30,9 +30,9 @@ export const projectTemplates = {
   },
   mixed: {
     name: "Смешанный лес",
-    treeType: "Смешанный лес",
+    treeType: "Смешанный лес", 
     areaHa: 500,
-    projectYears: 60,
+    projectYears: 80,
     discountRate: 0.2,
     inflation: 0.03,
     landPrice: 300000,
@@ -60,7 +60,7 @@ export const projectTemplates = {
     name: "Лиственный лес (Дуб)",
     treeType: "Дуб",
     areaHa: 300,
-    projectYears: 100,
+    projectYears: 100, // Дуб - долгоживущая порода
     discountRate: 0.18,
     inflation: 0.028,
     landPrice: 600000,
@@ -88,7 +88,7 @@ export const projectTemplates = {
     name: "Коммерческий лес (Ель)",
     treeType: "Ель",
     areaHa: 2000,
-    projectYears: 50,
+    projectYears: 80,
     discountRate: 0.25,
     inflation: 0.035,
     landPrice: 400000,
@@ -110,6 +110,34 @@ export const projectTemplates = {
     timberHarvestCost: 40,
     transportCostPerKm: 8,
     transportDistance: 30,
+    profitTaxRate: 0.25
+  },
+  fast_growing: {
+    name: "Быстрорастущий лес (Береза)",
+    treeType: "Береза", 
+    areaHa: 800,
+    projectYears: 50, // Короткий цикл для быстрорастущих пород
+    discountRate: 0.28,
+    inflation: 0.04,
+    landPrice: 350000,
+    prepPerHa: 18000,
+    seedlingsPerHa: 1800,
+    seedlingCost: 70,
+    plantingCostPerHa: 9000,
+    pestsInitialPerHa: 7000,
+    equipmentPerHa: 16000,
+    designVerification: 450000,
+    weedingCostPerHa: 5500,
+    weedingFreq: 3,
+    pruningCostPerHa: 900,
+    pruningFreq: 2,
+    thinningCostPerHa: 90000,
+    carbonUnitPrice: 900,
+    timberPrice: 1500,
+    timberVolumePerHa: 220,
+    timberHarvestCost: 35,
+    transportCostPerKm: 9,
+    transportDistance: 35,
     profitTaxRate: 0.25
   }
 };
