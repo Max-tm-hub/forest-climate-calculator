@@ -1,3 +1,4 @@
+// CalculatorForm.jsx
 import React from 'react';
 import { getSupportedTreeTypes } from '../data/co2Increment';
 
@@ -11,8 +12,8 @@ export default function CalculatorForm({ inputs, onInputChange, onSubmit }) {
         { name: "treeType", label: "Порода деревьев", type: "select", options: treeTypes },
         { name: "areaHa", label: "Площадь проекта (га)", type: "number", min: 1, max: 10000 },
         { name: "projectYears", label: "Срок проекта (лет)", type: "number", min: 1, max: 100 },
-        { name: "discountRate", label: "Ставка дисконтирования (%)", type: "number", step: 0.01, min: 0, max: 1 },
-        { name: "inflation", label: "Уровень инфляции (%)", type: "number", step: 0.01, min: 0, max: 0.5 }
+        { name: "discountRate", label: "Ставка дисконтирования (%)", type: "percent", step: 0.1, min: 0, max: 100 },
+        { name: "inflation", label: "Уровень инфляции (%)", type: "percent", step: 0.1, min: 0, max: 50 }
       ]
     },
     {
@@ -47,13 +48,20 @@ export default function CalculatorForm({ inputs, onInputChange, onSubmit }) {
         { name: "timberHarvestCost", label: "Стоимость заготовки (руб/м³)", type: "number" },
         { name: "transportCostPerKm", label: "Транспорт (руб/км/м³)", type: "number" },
         { name: "transportDistance", label: "Расстояние транспортировки (км)", type: "number" },
-        { name: "profitTaxRate", label: "Налог на прибыль (%)", type: "number", step: 0.01, min: 0, max: 1 }
+        { name: "profitTaxRate", label: "Налог на прибыль (%)", type: "percent", step: 0.1, min: 0, max: 100 }
       ]
     }
   ];
 
   const handleInputChange = (name, value) => {
     onInputChange(name, value);
+  };
+
+  const getInputValue = (input, value) => {
+    if (input.type === 'percent') {
+      return value !== undefined ? value : '';
+    }
+    return value !== undefined ? value : '';
   };
 
   return (
@@ -96,9 +104,12 @@ export default function CalculatorForm({ inputs, onInputChange, onSubmit }) {
                   </select>
                 ) : (
                   <input
-                    type={input.type}
-                    value={inputs[input.name] || ''}
-                    onChange={(e) => handleInputChange(input.name, parseFloat(e.target.value) || 0)}
+                    type="number"
+                    value={getInputValue(input, inputs[input.name])}
+                    onChange={(e) => {
+                      const rawValue = parseFloat(e.target.value) || 0;
+                      handleInputChange(input.name, rawValue);
+                    }}
                     min={input.min}
                     max={input.max}
                     step={input.step}
