@@ -1,3 +1,4 @@
+// projectTemplates.js
 // Шаблоны предустановленных конфигураций проектов с учетом реальных данных
 export const projectTemplates = {
   boreal: {
@@ -5,8 +6,8 @@ export const projectTemplates = {
     treeType: "Сосна",
     areaHa: 1000,
     projectYears: 80, // Оптимальный срок для сосны
-    discountRate: 0.23,
-    inflation: 0.03,
+    discountRate: 10, // Исправлено: было 0.23
+    inflation: 3,     // Исправлено: было 0.03
     landPrice: 500000,
     prepPerHa: 20000,
     seedlingsPerHa: 1300,
@@ -26,15 +27,15 @@ export const projectTemplates = {
     timberHarvestCost: 50,
     transportCostPerKm: 10,
     transportDistance: 50,
-    profitTaxRate: 0.25
+    profitTaxRate: 20 // Исправлено: было 0.25
   },
   mixed: {
     name: "Смешанный лес",
     treeType: "Смешанный лес", 
     areaHa: 500,
     projectYears: 80,
-    discountRate: 0.2,
-    inflation: 0.03,
+    discountRate: 10, // Исправлено: было 0.2
+    inflation: 3,     // Исправлено: было 0.03
     landPrice: 300000,
     prepPerHa: 25000,
     seedlingsPerHa: 1500,
@@ -54,15 +55,15 @@ export const projectTemplates = {
     timberHarvestCost: 45,
     transportCostPerKm: 12,
     transportDistance: 40,
-    profitTaxRate: 0.25
+    profitTaxRate: 20 // Исправлено: было 0.25
   },
   deciduous: {
     name: "Лиственный лес (Дуб)",
     treeType: "Дуб",
     areaHa: 300,
     projectYears: 100, // Дуб - долгоживущая порода
-    discountRate: 0.18,
-    inflation: 0.03,
+    discountRate: 8,   // Исправлено: было 0.18
+    inflation: 3,      // Исправлено: было 0.03
     landPrice: 600000,
     prepPerHa: 30000,
     seedlingsPerHa: 800,
@@ -82,15 +83,15 @@ export const projectTemplates = {
     timberHarvestCost: 60,
     transportCostPerKm: 15,
     transportDistance: 60,
-    profitTaxRate: 0.25
+    profitTaxRate: 20 // Исправлено: было 0.25
   },
   commercial: {
     name: "Коммерческий лес (Ель)",
     treeType: "Ель",
     areaHa: 2000,
     projectYears: 80,
-    discountRate: 0.25,
-    inflation: 0.04,
+    discountRate: 12,  // Исправлено: было 0.25
+    inflation: 4,      // Исправлено: было 0.04
     landPrice: 400000,
     prepPerHa: 15000,
     seedlingsPerHa: 2000,
@@ -110,15 +111,15 @@ export const projectTemplates = {
     timberHarvestCost: 40,
     transportCostPerKm: 8,
     transportDistance: 30,
-    profitTaxRate: 0.25
+    profitTaxRate: 20 // Исправлено: было 0.25
   },
   fast_growing: {
     name: "Быстрорастущий лес (Береза)",
     treeType: "Береза", 
     areaHa: 800,
     projectYears: 50, // Короткий цикл для быстрорастущих пород
-    discountRate: 0.28,
-    inflation: 0.04,
+    discountRate: 15, // Исправлено: было 0.28
+    inflation: 4,     // Исправлено: было 0.04
     landPrice: 350000,
     prepPerHa: 18000,
     seedlingsPerHa: 1800,
@@ -138,7 +139,35 @@ export const projectTemplates = {
     timberHarvestCost: 35,
     transportCostPerKm: 9,
     transportDistance: 35,
-    profitTaxRate: 0.25
+    profitTaxRate: 20 // Исправлено: было 0.25
+  },
+  douglas_fir: {
+    name: "Пихта Дугласа",
+    treeType: "Пихта Дугласа",
+    areaHa: 600,
+    projectYears: 60,
+    discountRate: 12,
+    inflation: 3,
+    landPrice: 450000,
+    prepPerHa: 22000,
+    seedlingsPerHa: 1200,
+    seedlingCost: 90,
+    plantingCostPerHa: 11000,
+    pestsInitialPerHa: 7500,
+    equipmentPerHa: 19000,
+    designVerification: 550000,
+    weedingCostPerHa: 5200,
+    weedingFreq: 2,
+    pruningCostPerHa: 1100,
+    pruningFreq: 1,
+    thinningCostPerHa: 110000,
+    carbonUnitPrice: 1300,
+    timberPrice: 2300,
+    timberVolumePerHa: 280,
+    timberHarvestCost: 42,
+    transportCostPerKm: 11,
+    transportDistance: 45,
+    profitTaxRate: 20
   }
 };
 
