@@ -34,12 +34,14 @@ function generateWordHTML(results, inputs, chartImages = {}) {
   <meta charset="UTF-8">
   <title>Отчет по лесному климатическому проекту</title>
   <style>
-    /* Основные стили */
+    /* Основные стили - БЕЗ полей, Word добавит свои */
     body { 
       font-family: 'Times New Roman', serif; 
       font-size: 12pt; 
-      margin: 2cm 2cm 2cm 2cm;
+      margin: 0;
+      padding: 0;
       line-height: 1.2;
+      width: 100%;
     }
     h1 { 
       color: #2e7d32; 
@@ -63,9 +65,9 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       margin-bottom: 10pt;
     }
     table { 
-      width: 100%; 
+      width: 95%; 
       border-collapse: collapse; 
-      margin: 12pt 0;
+      margin: 12pt auto;
       table-layout: fixed;
     }
     th, td { 
@@ -82,16 +84,22 @@ function generateWordHTML(results, inputs, chartImages = {}) {
     }
     .header { 
       text-align: center; 
-      margin-bottom: 40pt; 
+      margin-bottom: 30pt; 
       border-bottom: 2pt solid #2e7d32;
-      padding-bottom: 20pt;
+      padding-bottom: 15pt;
     }
     .section { 
       margin-bottom: 25pt; 
+      width: 95%;
+      margin-left: auto;
+      margin-right: auto;
     }
     .chart-section {
       margin: 30pt 0;
       page-break-inside: avoid;
+      width: 95%;
+      margin-left: auto;
+      margin-right: auto;
     }
     .chart-container { 
       text-align: center; 
@@ -106,8 +114,8 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       color: #2e7d32;
     }
     .chart-image {
-      max-width: 90%;
-      max-height: 14cm;
+      max-width: 85%;
+      max-height: 12cm;
       border: 1pt solid #ddd;
       display: block;
       margin: 0 auto;
@@ -121,9 +129,9 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       color: #666;
     }
     /* Узкие колонки для таблиц */
-    .col-year { width: 10%; }
+    .col-year { width: 12%; }
     .col-number { width: 22%; }
-    .col-medium { width: 32%; }
+    .col-medium { width: 30%; }
     .col-large { width: 36%; }
     /* Разделитель страниц */
     .page-break {
@@ -141,9 +149,16 @@ function generateWordHTML(results, inputs, chartImages = {}) {
     li {
       margin-bottom: 5pt;
     }
+    /* Контейнер для центрирования контента */
+    .content-wrapper {
+      width: 95%;
+      margin: 0 auto;
+    }
   </style>
 </head>
 <body>
+
+<div class="content-wrapper">
 
   <!-- СТРАНИЦА 1: ТИТУЛЬНЫЙ ЛИСТ И ОСНОВНЫЕ ДАННЫЕ -->
   <div class="header">
@@ -262,8 +277,12 @@ function generateWordHTML(results, inputs, chartImages = {}) {
     </table>
   </div>
 
+</div>
+
   <!-- РАЗДЕЛИТЕЛЬ СТРАНИЦ -->
   <div class="page-break"></div>
+
+<div class="content-wrapper">
 
   <!-- СТРАНИЦА 2: ГРАФИКИ -->
   <div class="section">
@@ -290,14 +309,20 @@ function generateWordHTML(results, inputs, chartImages = {}) {
     ` : '<p>График углеродных единиц недоступен</p>'}
   </div>
 
+</div>
+
   <!-- РАЗДЕЛИТЕЛЬ СТРАНИЦ -->
   <div class="page-break"></div>
+
+<div class="content-wrapper">
 
   <!-- СТРАНИЦА 3: ВЫВОДЫ И РЕКОМЕНДАЦИИ -->
   <div class="section">
     <h2>5. ВЫВОДЫ И РЕКОМЕНДАЦИИ</h2>
     ${generateConclusion(results, inputs)}
   </div>
+
+</div>
 
   <div class="clearfix"></div>
 
@@ -370,8 +395,8 @@ function chartToBase64(chartRef) {
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     
-    // Оптимальные размеры для Word документа
-    const targetWidth = 800; // пикселей для хорошего качества
+    // Оптимальные размеры для Word документа (учитывая стандартные поля Word)
+    const targetWidth = 700; // меньше для учета полей Word
     const scale = targetWidth / canvas.width;
     tempCanvas.width = targetWidth;
     tempCanvas.height = canvas.height * scale;
@@ -385,7 +410,7 @@ function chartToBase64(chartRef) {
     tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
     tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
     
-    const dataUrl = tempCanvas.toDataURL('image/png', 0.9); // немного сжимаем для уменьшения размера
+    const dataUrl = tempCanvas.toDataURL('image/png', 0.9);
     console.log('Chart converted to base64 successfully, size:', dataUrl.length);
     return dataUrl;
     
