@@ -293,7 +293,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
               label += ': ';
             }
             if (context.parsed.y !== null) {
-              label += context.parsed.y.toFixed(1) + ' тыс. т';
+              label += context.parsed.y.toFixed(3) + ' тыс. т'; // 3 знака после запятой
             }
             return label;
           }
@@ -339,7 +339,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
             weight: 'bold'
           },
           callback: function(value) {
-            return value.toFixed(0) + 'K';
+            return value.toFixed(3) + 'K'; // 3 знака после запятой
           }
         },
         grid: {
