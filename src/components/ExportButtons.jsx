@@ -32,15 +32,17 @@ export default function ExportButtons({ results, inputs, chartRefs }) {
       return;
     }
 
+    console.log('Canvas dimensions:', {
+      cashFlow: { width: cashFlowCanvas.width, height: cashFlowCanvas.height },
+      carbon: { width: carbonCanvas.width, height: carbonCanvas.height }
+    });
+
     if (cashFlowCanvas.width === 0 || carbonCanvas.width === 0) {
       alert('Графики еще не отрисованы. Подождите немного и попробуйте снова.');
       return;
     }
 
-    console.log('Starting Word export with verified chart refs:', {
-      cashFlowWidth: cashFlowCanvas.width,
-      carbonWidth: carbonCanvas.width
-    });
+    console.log('Starting Word export with verified chart refs');
 
     try {
       await exportToWord(results, inputs, chartRefs);
