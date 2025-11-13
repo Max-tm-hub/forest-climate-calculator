@@ -114,8 +114,8 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       color: #2e7d32;
     }
     .chart-image {
-      max-width: 75%;
-      max-height: 11cm;
+      max-width: 70%;
+      max-height: 13cm;
       border: 1pt solid #ddd;
       display: block;
       margin: 0 auto;
@@ -385,7 +385,7 @@ function generateConclusion(results, inputs) {
   return conclusion;
 }
 
-// Функция для конвертации графика в base64 с оптимизированными размерами
+// Улучшенная функция для конвертации графика в base64 с повышенной резкостью текста
 function chartToBase64(chartRef) {
   if (!chartRef || !chartRef.canvas) {
     console.error('Chart reference or canvas is missing');
@@ -409,27 +409,44 @@ function chartToBase64(chartRef) {
       height: canvas.height
     });
     
-    // Создаем временный canvas с оптимизированными размерами для Word
+    // Создаем временный canvas с увеличенным разрешением для текста
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     
-    // Еще меньше для гарантии, что не вылезет за поля
-    const targetWidth = 600; 
-    const scale = targetWidth / canvas.width;
-    tempCanvas.width = targetWidth;
+    // Увеличиваем разрешение в 3 раза для лучшего качества текста
+    const scale = 3;
+    tempCanvas.width = canvas.width * scale;
     tempCanvas.height = canvas.height * scale;
     
-    // Настраиваем сглаживание для лучшего качества
-    tempCtx.imageSmoothingEnabled = true;
-    tempCtx.imageSmoothingQuality = 'high';
+    // Отключаем сглаживание для текста - это ключевое изменение!
+    tempCtx.imageSmoothingEnabled = false;
+    tempCtx.textRendering = 'geometricPrecision';
     
-    // Копируем содержимое с белым фоном
+    // Рисуем белый фон
     tempCtx.fillStyle = '#FFFFFF';
     tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-    tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
     
-    const dataUrl = tempCanvas.toDataURL('image/png', 0.9);
-    console.log('Chart converted to base64 successfully, size:', dataUrl.length);
+    // Масштабируем и рисуем график
+    tempCtx.scale(scale, scale);
+    tempCtx.drawImage(canvas, 0, 0);
+    
+    // Теперь уменьшаем до нужного размера с лучшим качеством
+    const finalCanvas = document.createElement('canvas');
+    const finalCtx = finalCanvas.getContext('2d');
+    
+    // Финальный размер для Word (увеличили для лучшего качества)
+    const targetWidth = 800;
+    const finalScale = targetWidth / tempCanvas.width;
+    finalCanvas.width = targetWidth;
+    finalCanvas.height = tempCanvas.height * finalScale;
+    
+    // Для финального сжатия используем высокое качество
+    finalCtx.imageSmoothingEnabled = true;
+    finalCtx.imageSmoothingQuality = 'high';
+    finalCtx.drawImage(tempCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+    
+    const dataUrl = finalCanvas.toDataURL('image/png', 1.0); // Максимальное качество
+    console.log('Chart converted to base64 with high quality text');
     return dataUrl;
     
   } catch (error) {
