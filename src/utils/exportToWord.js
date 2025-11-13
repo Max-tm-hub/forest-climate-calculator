@@ -307,9 +307,17 @@ function chartToBase64(chartRef) {
     
     // Проверяем, что canvas имеет содержимое
     if (canvas.width === 0 || canvas.height === 0) {
-      console.error('Canvas has zero dimensions');
+      console.error('Canvas has zero dimensions:', {
+        width: canvas.width,
+        height: canvas.height
+      });
       return null;
     }
+
+    console.log('Converting chart with dimensions:', {
+      width: canvas.width,
+      height: canvas.height
+    });
     
     // Создаем временный canvas с увеличенным разрешением для лучшего качества
     const tempCanvas = document.createElement('canvas');
@@ -345,12 +353,12 @@ export async function exportToWord(results, inputs, chartRefs = {}) {
     console.log('Starting Word export...', {
       hasCashFlowChart: !!chartRefs.cashFlowChart,
       hasCarbonChart: !!chartRefs.carbonChart,
-      cashFlowChart: chartRefs.cashFlowChart,
-      carbonChart: chartRefs.carbonChart
+      cashFlowCanvas: chartRefs.cashFlowChart?.canvas,
+      carbonCanvas: chartRefs.carbonChart?.canvas
     });
 
     // Даем время на полную отрисовку графиков
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Конвертируем графики в base64
     const chartImages = {};
@@ -359,12 +367,16 @@ export async function exportToWord(results, inputs, chartRefs = {}) {
       console.log('Converting cash flow chart...');
       chartImages.cashFlowChart = chartToBase64(chartRefs.cashFlowChart);
       console.log('Cash flow chart converted:', !!chartImages.cashFlowChart);
+    } else {
+      console.error('Cash flow chart reference is missing');
     }
     
     if (chartRefs.carbonChart) {
       console.log('Converting carbon chart...');
       chartImages.carbonChart = chartToBase64(chartRefs.carbonChart);
       console.log('Carbon chart converted:', !!chartImages.carbonChart);
+    } else {
+      console.error('Carbon chart reference is missing');
     }
 
     // Генерируем HTML контент
