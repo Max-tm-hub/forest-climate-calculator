@@ -1,7 +1,6 @@
-// src/components/ExportButtons.jsx
 import React from 'react';
 import { exportToExcel } from '../utils/exportToExcel';
-import { exportGostReport } from '../utils/exportToPdf';
+import { exportToWord } from '../utils/exportToWord';
 
 export default function ExportButtons({ results, inputs, chartRefs }) {
   const handleExportExcel = () => {
@@ -12,7 +11,7 @@ export default function ExportButtons({ results, inputs, chartRefs }) {
     }
   };
 
-  const handleExportPdf = () => {
+  const handleExportWord = () => {
     if (!results) {
       alert('Сначала выполните расчет');
       return;
@@ -23,8 +22,8 @@ export default function ExportButtons({ results, inputs, chartRefs }) {
       return;
     }
 
-    console.log('Starting GOST PDF export with chart refs:', chartRefs);
-    exportGostReport(results, inputs, chartRefs);
+    console.log('Starting Word export with chart refs:', chartRefs);
+    exportToWord(results, inputs, chartRefs);
   };
 
   return (
@@ -45,7 +44,7 @@ export default function ExportButtons({ results, inputs, chartRefs }) {
         📊 Экспорт в Excel
       </button>
       <button 
-        onClick={handleExportPdf}
+        onClick={handleExportWord}
         style={{ 
           padding: '12px 24px', 
           backgroundColor: '#2196F3', 
@@ -57,7 +56,7 @@ export default function ExportButtons({ results, inputs, chartRefs }) {
           fontWeight: 'bold'
         }}
       >
-        📄 Экспорт в PDF (ГОСТ)
+        📄 Экспорт в Word
       </button>
     </div>
   );
