@@ -1,4 +1,5 @@
-import { getCO2IncrementData, isTreeTypeSupported } from '../data/co2Increment';
+// calculator.js
+import { getCO2IncrementData, isTreeTypeSupported, getSupportedTreeTypes } from '../data/co2Increment';
 
 // IRR (метод Ньютона)
 export function calculateIRR(cashFlows, guess = 0.1) {
@@ -18,11 +19,15 @@ export function calculateIRR(cashFlows, guess = 0.1) {
   return NaN;
 }
 
-// Основной расчёт — 100% соответствует Excel
+// Основной расчёт
 export function calculateProject(params) {
+  // Преобразование процентов в доли для расчетов
+  const discountRate = (params.discountRate || 10) / 100;
+  const inflation = (params.inflation || 3) / 100;
+  const profitTaxRate = (params.profitTaxRate || 20) / 100;
+
   const {
     treeType, areaHa, projectYears = 80,
-    discountRate = 0.23, inflation = 0.03,
     landPrice = 500000, prepPerHa = 20000,
     seedlingsPerHa = 1300, seedlingCost = 120,
     plantingCostPerHa = 10000, pestsInitialPerHa = 8000,
@@ -33,7 +38,6 @@ export function calculateProject(params) {
     carbonUnitPrice = 1100, timberPrice = 1900,
     timberVolumePerHa = 200, timberHarvestCost = 50,
     transportCostPerKm = 10, transportDistance = 50,
-    profitTaxRate = 0.25
   } = params;
 
   // Проверяем корректность параметров
@@ -47,14 +51,6 @@ export function calculateProject(params) {
       `Порода "${treeType}" не поддерживается. ` +
       `Доступные породы: ${supportedTypes.join(', ')}`
     );
-  }
-
-  if (inflation < 0 || inflation > 1) {
-    throw new Error('Уровень инфляции должен быть между 0 и 1 (0% - 100%)');
-  }
-
-  if (discountRate < 0 || discountRate > 1) {
-    throw new Error('Ставка дисконтирования должна быть между 0 и 1 (0% - 100%)');
   }
 
   if (projectYears < 1 || projectYears > 100) {
@@ -72,8 +68,7 @@ export function calculateProject(params) {
   const depreciableInvestment = totalInvestment - landCost;
   const annualDepreciation = projectYears > 0 ? depreciableInvestment / projectYears : 0;
 
-  // === 2. Данные по приросту CO₂ (ключевая часть!) ===
-  // Получаем данные для нужного количества лет (projectYears + 1, т.к. включаем год 0)
+  // === 2. Данные по приросту CO₂ ===
   const requiredYears = projectYears + 1;
   const incrementProfile = getCO2IncrementData(treeType, requiredYears);
 
