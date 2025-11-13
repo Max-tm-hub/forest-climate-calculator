@@ -22,7 +22,7 @@ function getCurrentDate() {
   return `${day}.${month}.${year}`;
 }
 
-// Функция для создания HTML контента для Word с альбомными страницами для графиков
+// Функция для создания HTML контента для Word
 function generateWordHTML(results, inputs, chartImages = {}) {
   const keyYears = [0, 1, 5, 10, 20, 30, 50, inputs.projectYears].filter(y => y <= inputs.projectYears);
   
@@ -34,67 +34,47 @@ function generateWordHTML(results, inputs, chartImages = {}) {
   <meta charset="UTF-8">
   <title>Отчет по лесному климатическому проекту</title>
   <style>
-    /* Сброс стандартных отступов Word */
+    /* Основные стили */
     body { 
       font-family: 'Times New Roman', serif; 
       font-size: 12pt; 
-      margin: 0;
-      padding: 0;
-    }
-    /* Основные стили для книжной ориентации */
-    .portrait-section {
-      margin: 2cm 1.5cm 2cm 2cm;
-    }
-    /* Стили для альбомной ориентации - используем таблицу для поворота */
-    .landscape-section {
-      margin: 1.5cm;
-      width: 29.7cm; /* Высота A4 в альбомной */
-      height: 21cm;  /* Ширина A4 в альбомной */
-    }
-    .landscape-container {
-      transform: rotate(90deg);
-      transform-origin: left top;
-      width: 21cm;
-      height: 29.7cm;
-      position: relative;
-      left: 29.7cm;
-      top: 0;
-    }
-    .landscape-content {
-      width: 29.7cm;
-      height: 21cm;
+      margin: 2cm 2cm 2cm 2cm;
+      line-height: 1.2;
     }
     h1 { 
       color: #2e7d32; 
       text-align: center; 
       font-size: 16pt; 
       margin-top: 0;
-      margin-bottom: 10pt;
+      margin-bottom: 20pt;
     }
     h2 { 
       color: #1976d2; 
       font-size: 14pt; 
-      margin-top: 20pt; 
-      margin-bottom: 10pt;
+      margin-top: 25pt; 
+      margin-bottom: 12pt;
+      border-bottom: 1pt solid #1976d2;
+      padding-bottom: 4pt;
     }
     h3 { 
       color: #d32f2f; 
       font-size: 13pt; 
-      margin-top: 15pt; 
-      margin-bottom: 8pt;
+      margin-top: 20pt; 
+      margin-bottom: 10pt;
     }
     table { 
       width: 100%; 
       border-collapse: collapse; 
-      margin: 10pt 0;
+      margin: 12pt 0;
       table-layout: fixed;
     }
     th, td { 
       border: 1pt solid #000; 
-      padding: 4pt; 
+      padding: 5pt; 
       text-align: left;
       word-wrap: break-word;
       font-size: 10pt;
+      vertical-align: top;
     }
     th { 
       background-color: #f2f2f2; 
@@ -102,207 +82,224 @@ function generateWordHTML(results, inputs, chartImages = {}) {
     }
     .header { 
       text-align: center; 
-      margin-bottom: 30pt; 
+      margin-bottom: 40pt; 
+      border-bottom: 2pt solid #2e7d32;
+      padding-bottom: 20pt;
     }
     .section { 
-      margin-bottom: 20pt; 
+      margin-bottom: 25pt; 
+    }
+    .chart-section {
+      margin: 30pt 0;
+      page-break-inside: avoid;
     }
     .chart-container { 
       text-align: center; 
-      margin: 15pt 0;
-      page-break-inside: avoid;
+      margin: 20pt auto;
+      width: 100%;
     }
     .chart-title { 
       font-weight: bold; 
       margin-bottom: 15pt; 
-      font-size: 14pt;
+      font-size: 13pt;
       text-align: center;
+      color: #2e7d32;
     }
     .chart-image {
-      max-width: 100%;
-      max-height: 16cm;
+      max-width: 90%;
+      max-height: 14cm;
       border: 1pt solid #ddd;
       display: block;
       margin: 0 auto;
+      page-break-inside: avoid;
+    }
+    .chart-description {
+      text-align: center;
+      font-style: italic;
+      margin-top: 10pt;
+      font-size: 11pt;
+      color: #666;
     }
     /* Узкие колонки для таблиц */
-    .col-year { width: 8%; }
-    .col-number { width: 20%; }
-    .col-medium { width: 30%; }
-    .col-large { width: 42%; }
+    .col-year { width: 10%; }
+    .col-number { width: 22%; }
+    .col-medium { width: 32%; }
+    .col-large { width: 36%; }
     /* Разделитель страниц */
     .page-break {
       page-break-before: always;
+      margin-top: 0;
+      padding-top: 0;
     }
-    .section-break {
-      margin-top: 30pt;
+    .clearfix {
+      clear: both;
+    }
+    ul {
+      margin: 10pt 0;
+      padding-left: 20pt;
+    }
+    li {
+      margin-bottom: 5pt;
     }
   </style>
 </head>
 <body>
 
-  <!-- СТРАНИЦА 1: ТИТУЛЬНЫЙ ЛИСТ И ОСНОВНЫЕ ДАННЫЕ (КНИЖНАЯ) -->
-  <div class="portrait-section">
-    <div class="header">
-      <h1>МИНИСТЕРСТВО ПРИРОДНЫХ РЕСУРСОВ И ЭКОЛОГИИ РОССИЙСКОЙ ФЕДЕРАЦИИ</h1>
-      <h2>ОТЧЁТ О РАСЧЁТЕ ЭФФЕКТИВНОСТИ ЛЕСНОГО КЛИМАТИЧЕСКОГО ПРОЕКТА</h2>
-      <p><strong>Дата формирования:</strong> ${getCurrentDate()}</p>
-    </div>
-
-    <div class="section">
-      <h2>1. ПАРАМЕТРЫ ПРОЕКТА</h2>
-      <table>
-        <colgroup>
-          <col class="col-large">
-          <col class="col-medium">
-        </colgroup>
-        <tr>
-          <th>Параметр</th>
-          <th>Значение</th>
-        </tr>
-        <tr>
-          <td>Порода деревьев</td>
-          <td>${safeText(inputs.treeType)}</td>
-        </tr>
-        <tr>
-          <td>Площадь проекта</td>
-          <td>${inputs.areaHa} га</td>
-        </tr>
-        <tr>
-          <td>Срок реализации</td>
-          <td>${inputs.projectYears} лет</td>
-        </tr>
-        <tr>
-          <td>Ставка дисконтирования</td>
-          <td>${(inputs.discountRate * 100).toFixed(1)}%</td>
-        </tr>
-        <tr>
-          <td>Уровень инфляции</td>
-          <td>${(inputs.inflation * 100).toFixed(1)}%</td>
-        </tr>
-        <tr>
-          <td>Цена углеродной единицы</td>
-          <td>${formatNumber(inputs.carbonUnitPrice)} руб/т</td>
-        </tr>
-        <tr>
-          <td>Цена древесины</td>
-          <td>${formatNumber(inputs.timberPrice)} руб/м³</td>
-        </tr>
-      </table>
-    </div>
-
-    <div class="section">
-      <h2>2. ФИНАНСОВЫЕ ПОКАЗАТЕЛИ</h2>
-      <table>
-        <colgroup>
-          <col class="col-large">
-          <col class="col-medium">
-        </colgroup>
-        <tr>
-          <th>Показатель</th>
-          <th>Значение</th>
-        </tr>
-        <tr>
-          <td>NPV (чистая приведенная стоимость)</td>
-          <td>${formatNumber(results.financials.npv)} руб</td>
-        </tr>
-        <tr>
-          <td>IRR (внутренняя норма доходности)</td>
-          <td>${safeText(results.financials.irr)}</td>
-        </tr>
-        <tr>
-          <td>Срок окупаемости (простой)</td>
-          <td>${safeText(results.financials.simplePayback)} лет</td>
-        </tr>
-        <tr>
-          <td>Срок окупаемости (дисконтированный)</td>
-          <td>${safeText(results.financials.discountedPayback)} лет</td>
-        </tr>
-        <tr>
-          <td>Себестоимость углеродной единицы</td>
-          <td>${formatNumber(results.financials.cuCost)} руб/т</td>
-        </tr>
-        <tr>
-          <td>ROI (рентабельность инвестиций)</td>
-          <td>${safeText(results.financials.roi)}</td>
-        </tr>
-        <tr>
-          <td>Индекс доходности</td>
-          <td>${safeText(results.financials.profitabilityIndex)}</td>
-        </tr>
-      </table>
-    </div>
-
-    <div class="section">
-      <h2>3. СВОДНЫЕ ДАННЫЕ ПО ГОДАМ</h2>
-      <table>
-        <colgroup>
-          <col class="col-year">
-          <col class="col-number">
-          <col class="col-number">
-          <col class="col-number">
-        </colgroup>
-        <tr>
-          <th>Год</th>
-          <th>УЕ (т CO₂)</th>
-          <th>Денежный поток (тыс. руб)</th>
-          <th>Дисконтированный ДП (тыс. руб)</th>
-        </tr>
-        ${keyYears.map(year => `
-          <tr>
-            <td>${year}</td>
-            <td>${formatNumber(results.carbonUnits[year])}</td>
-            <td>${formatNumber(results.cashFlows[year] / 1000)}</td>
-            <td>${formatNumber(results.discountedCashFlows[year] / 1000)}</td>
-          </tr>
-        `).join('')}
-      </table>
-    </div>
+  <!-- СТРАНИЦА 1: ТИТУЛЬНЫЙ ЛИСТ И ОСНОВНЫЕ ДАННЫЕ -->
+  <div class="header">
+    <h1>МИНИСТЕРСТВО ПРИРОДНЫХ РЕСУРСОВ И ЭКОЛОГИИ РОССИЙСКОЙ ФЕДЕРАЦИИ</h1>
+    <h2>ОТЧЁТ О РАСЧЁТЕ ЭФФЕКТИВНОСТИ ЛЕСНОГО КЛИМАТИЧЕСКОГО ПРОЕКТА</h2>
+    <p style="font-size: 13pt; margin-top: 15pt;"><strong>Дата формирования:</strong> ${getCurrentDate()}</p>
   </div>
 
-  <!-- СТРАНИЦА 2: ГРАФИК ДЕНЕЖНЫХ ПОТОКОВ (АЛЬБОМНАЯ) -->
-  ${chartImages.cashFlowChart ? `
-  <div class="page-break">
-    <div class="landscape-section">
-      <div class="landscape-container">
-        <div class="landscape-content">
-          <div class="chart-container">
-            <div class="chart-title">ДИНАМИКА ДЕНЕЖНЫХ ПОТОКОВ</div>
-            <img src="${chartImages.cashFlowChart}" alt="График денежных потоков" class="chart-image" />
-            <p style="text-align: center; margin-top: 10pt;"><em>Денежные потоки показаны в миллионах рублей</em></p>
-          </div>
-        </div>
+  <div class="section">
+    <h2>1. ПАРАМЕТРЫ ПРОЕКТА</h2>
+    <table>
+      <colgroup>
+        <col class="col-large">
+        <col class="col-medium">
+      </colgroup>
+      <tr>
+        <th>Параметр</th>
+        <th>Значение</th>
+      </tr>
+      <tr>
+        <td>Порода деревьев</td>
+        <td>${safeText(inputs.treeType)}</td>
+      </tr>
+      <tr>
+        <td>Площадь проекта</td>
+        <td>${inputs.areaHa} га</td>
+      </tr>
+      <tr>
+        <td>Срок реализации</td>
+        <td>${inputs.projectYears} лет</td>
+      </tr>
+      <tr>
+        <td>Ставка дисконтирования</td>
+        <td>${(inputs.discountRate * 100).toFixed(1)}%</td>
+      </tr>
+      <tr>
+        <td>Уровень инфляции</td>
+        <td>${(inputs.inflation * 100).toFixed(1)}%</td>
+      </tr>
+      <tr>
+        <td>Цена углеродной единицы</td>
+        <td>${formatNumber(inputs.carbonUnitPrice)} руб/т</td>
+      </tr>
+      <tr>
+        <td>Цена древесины</td>
+        <td>${formatNumber(inputs.timberPrice)} руб/м³</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>2. ФИНАНСОВЫЕ ПОКАЗАТЕЛИ</h2>
+    <table>
+      <colgroup>
+        <col class="col-large">
+        <col class="col-medium">
+      </colgroup>
+      <tr>
+        <th>Показатель</th>
+        <th>Значение</th>
+      </tr>
+      <tr>
+        <td>NPV (чистая приведенная стоимость)</td>
+        <td>${formatNumber(results.financials.npv)} руб</td>
+      </tr>
+      <tr>
+        <td>IRR (внутренняя норма доходности)</td>
+        <td>${safeText(results.financials.irr)}</td>
+      </tr>
+      <tr>
+        <td>Срок окупаемости (простой)</td>
+        <td>${safeText(results.financials.simplePayback)} лет</td>
+      </tr>
+      <tr>
+        <td>Срок окупаемости (дисконтированный)</td>
+        <td>${safeText(results.financials.discountedPayback)} лет</td>
+      </tr>
+      <tr>
+        <td>Себестоимость углеродной единицы</td>
+        <td>${formatNumber(results.financials.cuCost)} руб/т</td>
+      </tr>
+      <tr>
+        <td>ROI (рентабельность инвестиций)</td>
+        <td>${safeText(results.financials.roi)}</td>
+      </tr>
+      <tr>
+        <td>Индекс доходности</td>
+        <td>${safeText(results.financials.profitabilityIndex)}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>3. СВОДНЫЕ ДАННЫЕ ПО ГОДАМ</h2>
+    <table>
+      <colgroup>
+        <col class="col-year">
+        <col class="col-number">
+        <col class="col-number">
+        <col class="col-number">
+      </colgroup>
+      <tr>
+        <th>Год</th>
+        <th>УЕ (т CO₂)</th>
+        <th>Денежный поток (тыс. руб)</th>
+        <th>Дисконтированный ДП (тыс. руб)</th>
+      </tr>
+      ${keyYears.map(year => `
+        <tr>
+          <td>${year}</td>
+          <td>${formatNumber(results.carbonUnits[year])}</td>
+          <td>${formatNumber(results.cashFlows[year] / 1000)}</td>
+          <td>${formatNumber(results.discountedCashFlows[year] / 1000)}</td>
+        </tr>
+      `).join('')}
+    </table>
+  </div>
+
+  <!-- РАЗДЕЛИТЕЛЬ СТРАНИЦ -->
+  <div class="page-break"></div>
+
+  <!-- СТРАНИЦА 2: ГРАФИКИ -->
+  <div class="section">
+    <h2>4. ГРАФИЧЕСКАЯ ВИЗУАЛИЗАЦИЯ</h2>
+    
+    ${chartImages.cashFlowChart ? `
+    <div class="chart-section">
+      <div class="chart-container">
+        <div class="chart-title">ДИНАМИКА ДЕНЕЖНЫХ ПОТОКОВ</div>
+        <img src="${chartImages.cashFlowChart}" alt="График денежных потоков" class="chart-image" />
+        <div class="chart-description">Денежные потоки показаны в миллионах рублей</div>
       </div>
     </div>
-  </div>
-  ` : ''}
+    ` : '<p>График денежных потоков недоступен</p>'}
 
-  <!-- СТРАНИЦА 3: ГРАФИК УГЛЕРОДНЫХ ЕДИНИЦ (АЛЬБОМНАЯ) -->
-  ${chartImages.carbonChart ? `
-  <div class="page-break">
-    <div class="landscape-section">
-      <div class="landscape-container">
-        <div class="landscape-content">
-          <div class="chart-container">
-            <div class="chart-title">ДИНАМИКА НАКОПЛЕННЫХ УГЛЕРОДНЫХ ЕДИНИЦ</div>
-            <img src="${chartImages.carbonChart}" alt="График углеродных единиц" class="chart-image" />
-            <p style="text-align: center; margin-top: 10pt;"><em>Углеродные единицы показаны в тысячах тонн CO₂</em></p>
-          </div>
-        </div>
+    ${chartImages.carbonChart ? `
+    <div class="chart-section">
+      <div class="chart-container">
+        <div class="chart-title">ДИНАМИКА НАКОПЛЕННЫХ УГЛЕРОДНЫХ ЕДИНИЦ</div>
+        <img src="${chartImages.carbonChart}" alt="График углеродных единиц" class="chart-image" />
+        <div class="chart-description">Углеродные единицы показаны в тысячах тонн CO₂</div>
       </div>
     </div>
+    ` : '<p>График углеродных единиц недоступен</p>'}
   </div>
-  ` : ''}
 
-  <!-- СТРАНИЦА 4: ВЫВОДЫ И РЕКОМЕНДАЦИИ (КНИЖНАЯ) -->
-  <div class="page-break">
-    <div class="portrait-section">
-      <div class="section">
-        <h2>4. ВЫВОДЫ И РЕКОМЕНДАЦИИ</h2>
-        ${generateConclusion(results, inputs)}
-      </div>
-    </div>
+  <!-- РАЗДЕЛИТЕЛЬ СТРАНИЦ -->
+  <div class="page-break"></div>
+
+  <!-- СТРАНИЦА 3: ВЫВОДЫ И РЕКОМЕНДАЦИИ -->
+  <div class="section">
+    <h2>5. ВЫВОДЫ И РЕКОМЕНДАЦИИ</h2>
+    ${generateConclusion(results, inputs)}
   </div>
+
+  <div class="clearfix"></div>
 
 </body>
 </html>
@@ -345,7 +342,7 @@ function generateConclusion(results, inputs) {
   return conclusion;
 }
 
-// Улучшенная функция для конвертации графика в base64 с увеличенным разрешением
+// Функция для конвертации графика в base64 с оптимизированными размерами
 function chartToBase64(chartRef) {
   if (!chartRef || !chartRef.canvas) {
     console.error('Chart reference or canvas is missing');
@@ -369,26 +366,26 @@ function chartToBase64(chartRef) {
       height: canvas.height
     });
     
-    // Создаем временный canvas с увеличенным разрешением для лучшего качества
+    // Создаем временный canvas с оптимизированными размерами для Word
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     
-    // Для альбомных страниц делаем графики шире
-    const scale = 2.5;
-    tempCanvas.width = canvas.width * scale;
+    // Оптимальные размеры для Word документа
+    const targetWidth = 800; // пикселей для хорошего качества
+    const scale = targetWidth / canvas.width;
+    tempCanvas.width = targetWidth;
     tempCanvas.height = canvas.height * scale;
     
     // Настраиваем сглаживание для лучшего качества
-    tempCtx.scale(scale, scale);
     tempCtx.imageSmoothingEnabled = true;
     tempCtx.imageSmoothingQuality = 'high';
     
     // Копируем содержимое с белым фоном
     tempCtx.fillStyle = '#FFFFFF';
-    tempCtx.fillRect(0, 0, canvas.width, canvas.height);
-    tempCtx.drawImage(canvas, 0, 0);
+    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
     
-    const dataUrl = tempCanvas.toDataURL('image/png', 1.0);
+    const dataUrl = tempCanvas.toDataURL('image/png', 0.9); // немного сжимаем для уменьшения размера
     console.log('Chart converted to base64 successfully, size:', dataUrl.length);
     return dataUrl;
     
