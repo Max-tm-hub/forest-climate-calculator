@@ -2,308 +2,437 @@
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
+// Функция для безопасного текста
+function safeText(text) {
+  if (text === null || text === undefined) return '';
+  return String(text)
+    .replace(/[”“]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[—]/g, '-')
+    .replace(/[«»]/g, '"');
+}
+
+// Функция для форматирования чисел
+function formatNumber(num) {
+  if (num === null || num === undefined) return '0';
+  const rounded = Math.round(num);
+  return rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+// Функция для получения даты
+function getCurrentDate() {
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  return `${day}.${month}.${year}`;
+}
+
 export async function exportGostReport(results, inputs, chartRefs = {}) {
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
+  try {
+    console.log('Starting GOST PDF export...', {
+      hasCashFlowChart: !!chartRefs.cashFlowChart,
+      hasCarbonChart: !!chartRefs.carbonChart
+    });
 
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  const textWidth = pageWidth - 2 * margin;
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
 
-  // === 1. Титульный лист (ГОСТ Р 7.0.97-2016) ===
-  doc.setFont('times', 'normal');
-  doc.setFontSize(14);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const textWidth = pageWidth - 2 * margin;
 
-  doc.text('Министерство природных ресурсов и экологии Российской Федерации', margin, 30);
-  doc.text('Федеральное государственное бюджетное учреждение', margin, 37);
-  doc.text('«Научно-исследовательский институт лесного хозяйства»', margin, 44);
-  doc.line(margin, 50, pageWidth - margin, 50);
+    // Устанавливаем шрифт по умолчанию
+    doc.setFont('helvetica');
+    doc.setFontSize(12);
 
-  doc.setFontSize(16);
-  doc.text('ОТЧЁТ', pageWidth / 2, 80, { align: 'center' });
-  doc.text('о расчёте эффективности лесного климатического проекта', pageWidth / 2, 88, { align: 'center' });
+    // === 1. ТИТУЛЬНЫЙ ЛИСТ ===
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal');
+    
+    doc.text('МИНИСТЕРСТВО ПРИРОДНЫХ РЕСУРСОВ И ЭКОЛОГИИ РОССИЙСКОЙ ФЕДЕРАЦИИ', margin, 30);
+    doc.text('ФЕДЕРАЛЬНОЕ ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ', margin, 40);
+    doc.text('«НАУЧНО-ИССЛЕДОВАТЕЛЬСКИЙ ИНСТИТУТ ЛЕСНОГО ХОЗЯЙСТВА»', margin, 50);
+    
+    doc.line(margin, 60, pageWidth - margin, 60);
 
-  doc.setFontSize(14);
-  doc.text(`Порода: ${inputs.treeType}`, margin, 110);
-  doc.text(`Площадь: ${inputs.areaHa} га`, margin, 118);
-  doc.text(`Срок реализации: ${inputs.projectYears} лет`, margin, 126);
-  
-  const currentDate = new Date().toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-  doc.text(`Дата формирования: ${currentDate}`, margin, 140);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ОТЧЁТ', pageWidth / 2, 90, { align: 'center' });
+    doc.text('О РАСЧЁТЕ ЭФФЕКТИВНОСТИ ЛЕСНОГО КЛИМАТИЧЕСКОГО ПРОЕКТА', pageWidth / 2, 100, { align: 'center' });
 
-  doc.addPage();
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Порода: ${safeText(inputs.treeType)}`, margin, 120);
+    doc.text(`Площадь: ${inputs.areaHa} га`, margin, 130);
+    doc.text(`Срок реализации: ${inputs.projectYears} лет`, margin, 140);
+    
+    const currentDate = getCurrentDate();
+    doc.text(`Дата формирования: ${currentDate}`, margin, 160);
 
-  // === 2. Оглавление ===
-  doc.setFontSize(14);
-  doc.setFont('times', 'bold');
-  doc.text('СОДЕРЖАНИЕ', margin, 20);
-  doc.setFont('times', 'normal');
-  doc.setFontSize(12);
-  
-  let contentY = 40;
-  const contentLines = [
-    '1   Введение ............................................................................ 3',
-    '2   Методология расчёта .......................................................... 3',
-    '3   Результаты расчёта ............................................................ 4',
-    '4   Финансовые показатели ........................................................ 4',
-    '5   Графическая визуализация .................................................... 5',
-    '6   Выводы и рекомендации ...................................................... 6'
-  ];
-  
-  contentLines.forEach(line => {
-    doc.text(line, margin, contentY);
-    contentY += 8;
-  });
+    doc.addPage();
 
-  doc.addPage();
+    // === 2. ОГЛАВЛЕНИЕ ===
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('СОДЕРЖАНИЕ', margin, 20);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    
+    let contentY = 40;
+    const contentLines = [
+      '1   Введение ............................................................................ 3',
+      '2   Методология расчёта .......................................................... 3',
+      '3   Результаты расчёта ............................................................ 4',
+      '4   Финансовые показатели ........................................................ 4',
+      '5   Графическая визуализация .................................................... 5',
+      '6   Выводы и рекомендации ...................................................... 6'
+    ];
+    
+    contentLines.forEach(line => {
+      doc.text(line, margin, contentY);
+      contentY += 8;
+    });
 
-  // === 3. Введение ===
-  doc.setFontSize(14);
-  doc.setFont('times', 'bold');
-  doc.text('1   ВВЕДЕНИЕ', margin, 20);
-  doc.setFont('times', 'normal');
-  doc.setFontSize(12);
-  
-  const intro = `В рамках реализации Стратегии развития углеродного рынка в РФ и поддержки 
-лесных климатических проектов (ЛКП) выполнена оценка экономической эффективности 
-проекта поглощения парниковых газов лесными насаждениями. 
+    doc.addPage();
 
-Проект направлен на создание устойчивой экосистемы, способной к долгосрочному 
-поглощению углекислого газа, с одновременным получением экономического эффекта 
-от реализации углеродных единиц и лесной продукции.`;
-  
-  doc.text(intro, margin, 30, { maxWidth: textWidth });
+    // === 3. ВВЕДЕНИЕ ===
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('1   ВВЕДЕНИЕ', margin, 20);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    
+    const introLines = [
+      'В рамках реализации Стратегии развития углеродного рынка в РФ и поддержки',
+      'лесных климатических проектов (ЛКП) выполнена оценка экономической эффективности',
+      'проекта поглощения парниковых газов лесными насаждениями.',
+      '',
+      'Проект направлен на создание устойчивой экосистемы, способной к долгосрочному',
+      'поглощению углекислого газа, с одновременным получением экономического эффекта',
+      'от реализации углеродных единиц и лесной продукции.'
+    ];
+    
+    let introY = 35;
+    introLines.forEach(line => {
+      doc.text(safeText(line), margin, introY, { maxWidth: textWidth });
+      introY += 6;
+    });
 
-  // === 4. Методология ===
-  doc.text('2   МЕТОДОЛОГИЯ РАСЧЁТА', margin, 80);
-  const method = `Расчёт основан на методике, изложенной в Рекомендациях по разработке и 
-реализации лесных климатических проектов (Минприроды России, 2023). 
+    // === 4. МЕТОДОЛОГИЯ ===
+    doc.text('2   МЕТОДОЛОГИЯ РАСЧЁТА', margin, 80);
+    
+    const methodLines = [
+      'Расчёт основан на методике, изложенной в Рекомендациях по разработке и',
+      'реализации лесных климатических проектов (Минприроды России, 2023).',
+      '',
+      'Учитываются следующие факторы:',
+      '• Поглощение CO₂ по данным таблицы «Накопленный CO₂» (с учётом прироста)',
+      '• Выручка от продажи углеродных единиц и древесины',
+      '• Инвестиционные и операционные затраты',
+      '• Налог на прибыль организаций (25%)',
+      '• Инфляция и ставка дисконтирования',
+      '',
+      `Дисконтирование денежных потоков выполняется по ставке ${(inputs.discountRate * 100).toFixed(1)}%.`
+    ];
+    
+    let methodY = 90;
+    methodLines.forEach(line => {
+      doc.text(safeText(line), margin, methodY, { maxWidth: textWidth });
+      methodY += 5;
+    });
 
-Учитываются следующие факторы:
-• Поглощение CO₂ по данным таблицы «Накопленный CO₂» (с учётом прироста)
-• Выручка от продажи углеродных единиц и древесины
-• Инвестиционные и операционные затраты
-• Налог на прибыль организаций (25%)
-• Инфляция и ставка дисконтирования
+    doc.addPage();
 
-Дисконтирование денежных потоков выполняется по ставке ${(inputs.discountRate * 100).toFixed(1)}%.`;
-  
-  doc.text(method, margin, 90, { maxWidth: textWidth });
+    // === 5. РЕЗУЛЬТАТЫ РАСЧЁТА ===
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('3   РЕЗУЛЬТАТЫ РАСЧЁТА', margin, 20);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
 
-  doc.addPage();
+    const paramsData = [
+      ['Параметр проекта', 'Значение'],
+      ['Порода деревьев', safeText(inputs.treeType)],
+      ['Площадь проекта', `${inputs.areaHa} га`],
+      ['Срок реализации', `${inputs.projectYears} лет`],
+      ['Ставка дисконтирования', `${(inputs.discountRate * 100).toFixed(1)}%`],
+      ['Уровень инфляции', `${(inputs.inflation * 100).toFixed(1)}%`],
+      ['Цена углеродной единицы', `${formatNumber(inputs.carbonUnitPrice)} руб/т`],
+      ['Цена древесины', `${formatNumber(inputs.timberPrice)} руб/м³`]
+    ];
 
-  // === 5. Результаты расчёта ===
-  doc.setFontSize(14);
-  doc.setFont('times', 'bold');
-  doc.text('3   РЕЗУЛЬТАТЫ РАСЧЁТА', margin, 20);
-  doc.setFont('times', 'normal');
-  doc.setFontSize(12);
+    doc.autoTable({
+      startY: 35,
+      head: [paramsData[0]],
+      body: paramsData.slice(1),
+      theme: 'grid',
+      headStyles: { 
+        fillColor: [66, 66, 66], 
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 11
+      },
+      bodyStyles: { 
+        fontSize: 10
+      },
+      styles: {
+        fontSize: 10,
+        cellPadding: 4,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      margin: { left: margin, right: margin }
+    });
 
-  const paramsData = [
-    ['Параметр проекта', 'Значение'],
-    ['Порода деревьев', inputs.treeType],
-    ['Площадь проекта', `${inputs.areaHa} га`],
-    ['Срок реализации', `${inputs.projectYears} лет`],
-    ['Ставка дисконтирования', `${(inputs.discountRate * 100).toFixed(1)}%`],
-    ['Уровень инфляции', `${(inputs.inflation * 100).toFixed(1)}%`],
-    ['Цена углеродной единицы', `${inputs.carbonUnitPrice.toLocaleString('ru-RU')} руб/т`],
-    ['Цена древесины', `${inputs.timberPrice.toLocaleString('ru-RU')} руб/м³`]
-  ];
+    // === 6. ФИНАНСОВЫЕ ПОКАЗАТЕЛИ ===
+    doc.text('4   ФИНАНСОВЫЕ ПОКАЗАТЕЛИ', margin, doc.lastAutoTable.finalY + 20);
 
-  doc.autoTable({
-    startY: 30,
-    head: [paramsData[0]],
-    body: paramsData.slice(1),
-    theme: 'grid',
-    headStyles: { 
-      font: 'times', 
-      fontStyle: 'bold', 
-      fillColor: [240, 240, 240], 
-      textColor: [0, 0, 0],
-      halign: 'left'
-    },
-    bodyStyles: { 
-      font: 'times', 
-      fontSize: 11,
-      halign: 'left'
-    },
-    styles: {
-      fontSize: 11,
-      cellPadding: 4,
-      lineColor: [0, 0, 0],
-      lineWidth: 0.1
-    },
-    margin: { left: margin, right: margin }
-  });
+    const financialData = [
+      ['Показатель', 'Значение'],
+      ['NPV (чистая приведенная стоимость)', `${formatNumber(results.financials.npv)} руб`],
+      ['IRR (внутренняя норма доходности)', safeText(results.financials.irr)],
+      ['Срок окупаемости (простой)', `${safeText(results.financials.simplePayback)} лет`],
+      ['Срок окупаемости (дисконтированный)', `${safeText(results.financials.discountedPayback)} лет`],
+      ['Себестоимость УЕ', `${formatNumber(results.financials.cuCost)} руб/т`],
+      ['ROI (рентабельность инвестиций)', safeText(results.financials.roi)],
+      ['Индекс доходности', safeText(results.financials.profitabilityIndex)]
+    ];
 
-  // === 6. Финансовые показатели ===
-  doc.text('4   ФИНАНСОВЫЕ ПОКАЗАТЕЛИ', margin, doc.lastAutoTable.finalY + 20);
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 35,
+      head: [financialData[0]],
+      body: financialData.slice(1),
+      theme: 'grid',
+      headStyles: { 
+        fillColor: [66, 66, 66], 
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 11
+      },
+      bodyStyles: { 
+        fontSize: 10
+      },
+      styles: {
+        fontSize: 10,
+        cellPadding: 4,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      margin: { left: margin, right: margin }
+    });
 
-  const financialData = [
-    ['Показатель', 'Значение'],
-    ['NPV (чистая приведенная стоимость)', `${results.financials.npv.toLocaleString('ru-RU')} руб`],
-    ['IRR (внутренняя норма доходности)', results.financials.irr],
-    ['Срок окупаемости (простой)', `${results.financials.simplePayback} лет`],
-    ['Срок окупаемости (дисконтированный)', `${results.financials.discountedPayback} лет`],
-    ['Себестоимость УЕ', `${results.financials.cuCost.toLocaleString('ru-RU')} руб/т`],
-    ['ROI (рентабельность инвестиций)', results.financials.roi],
-    ['Индекс доходности', results.financials.profitabilityIndex.toString()],
-    ['Суммарные инвестиции', `${results.financials.totalInvestment?.toLocaleString('ru-RU') || '0'} руб`],
-    ['Общий объём поглощения CO₂', `${results.financials.totalCarbon?.toLocaleString('ru-RU') || '0'} т`]
-  ];
+    // === 7. ГРАФИКИ ===
+    let currentY = doc.lastAutoTable.finalY + 25;
+    
+    // Добавляем графики с улучшенной обработкой
+    const chartsAdded = await addChartsToPDF(doc, chartRefs, margin, textWidth, currentY);
+    
+    if (chartsAdded) {
+      currentY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 20 : currentY + 120;
+    }
 
-  doc.autoTable({
-    startY: doc.lastAutoTable.finalY + 30,
-    head: [financialData[0]],
-    body: financialData.slice(1),
-    theme: 'grid',
-    headStyles: { 
-      font: 'times', 
-      fontStyle: 'bold', 
-      fillColor: [240, 240, 240], 
-      textColor: [0, 0, 0],
-      halign: 'left'
-    },
-    bodyStyles: { 
-      font: 'times', 
-      fontSize: 11,
-      halign: 'left'
-    },
-    styles: {
-      fontSize: 11,
-      cellPadding: 4,
-      lineColor: [0, 0, 0],
-      lineWidth: 0.1
-    },
-    margin: { left: margin, right: margin }
-  });
+    // === 8. ВЫВОДЫ И РЕКОМЕНДАЦИИ ===
+    if (currentY > 120) {
+      doc.addPage();
+      currentY = 20;
+    }
+    
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('5   ВЫВОДЫ И РЕКОМЕНДАЦИИ', margin, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    currentY += 15;
 
-  // === 7. Графики ===
-  let currentY = doc.lastAutoTable.finalY + 20;
-  
-  // График денежных потоков
-  if (chartRefs.cashFlowChart && chartRefs.cashFlowChart.canvas) {
-    try {
-      if (currentY > 200) {
+    const conclusion = generateConclusion(results, inputs);
+    const conclusionLines = conclusion.split('\n');
+    
+    conclusionLines.forEach(line => {
+      if (currentY > 270) {
         doc.addPage();
         currentY = 20;
       }
+      doc.text(safeText(line), margin, currentY, { maxWidth: textWidth });
+      currentY += 6;
+    });
+
+    // === СОХРАНЕНИЕ ===
+    const fileName = `Отчет_ЛКП_${inputs.treeType}_${inputs.areaHa}га_${currentDate.replace(/\./g, '-')}.pdf`;
+    doc.save(fileName);
+    
+    console.log('GOST PDF export completed successfully');
+
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    alert('Ошибка при создании PDF: ' + error.message);
+  }
+}
+
+// Функция для добавления графиков в PDF
+async function addChartsToPDF(doc, chartRefs, margin, textWidth, startY) {
+  let chartsAdded = false;
+  let currentY = startY;
+
+  try {
+    // График денежных потоков
+    if (chartRefs.cashFlowChart && chartRefs.cashFlowChart.canvas) {
+      console.log('Processing cash flow chart for PDF...');
       
-      doc.text('5   ГРАФИЧЕСКАЯ ВИЗУАЛИЗАЦИЯ', margin, currentY);
-      currentY += 15;
+      // Добавляем заголовок раздела
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('6   ГРАФИЧЕСКАЯ ВИЗУАЛИЗАЦИЯ', margin, currentY);
+      currentY += 10;
       
       doc.setFontSize(12);
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('Динамика денежных потоков', margin, currentY);
-      doc.setFont('times', 'normal');
+      doc.setFont('helvetica', 'normal');
       currentY += 8;
+
+      // Ждем полной отрисовки графика
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const canvas = chartRefs.cashFlowChart.canvas;
-      const imgData = canvas.toDataURL('image/png');
-      const imgProps = doc.getImageProperties(imgData);
       
-      const pdfWidth = textWidth;
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      // Ограничиваем высоту графика
-      const maxChartHeight = 80;
-      const finalHeight = Math.min(pdfHeight, maxChartHeight);
-      const finalWidth = (pdfWidth * finalHeight) / pdfHeight;
-      
-      doc.addImage(imgData, 'PNG', margin + (textWidth - finalWidth) / 2, currentY, finalWidth, finalHeight);
-      currentY += finalHeight + 15;
-      
-    } catch (error) {
-      console.error('Ошибка при добавлении графика денежных потоков:', error);
-      doc.text('График денежных потоков недоступен', margin, currentY);
-      currentY += 20;
+      // Проверяем, что canvas имеет содержимое
+      if (canvas.width > 0 && canvas.height > 0) {
+        // Создаем временный canvas с увеличенным разрешением
+        const tempCanvas = document.createElement('canvas');
+        const ctx = tempCanvas.getContext('2d');
+        
+        const scale = 2;
+        tempCanvas.width = canvas.width * scale;
+        tempCanvas.height = canvas.height * scale;
+        
+        ctx.scale(scale, scale);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(canvas, 0, 0);
+        
+        const imgData = tempCanvas.toDataURL('image/png', 1.0);
+        
+        // Рассчитываем размеры для вставки
+        const maxChartWidth = textWidth;
+        const maxChartHeight = 80;
+        const aspectRatio = canvas.width / canvas.height;
+        
+        let chartWidth = maxChartWidth;
+        let chartHeight = chartWidth / aspectRatio;
+        
+        if (chartHeight > maxChartHeight) {
+          chartHeight = maxChartHeight;
+          chartWidth = chartHeight * aspectRatio;
+        }
+        
+        // Центрируем график
+        const x = margin + (textWidth - chartWidth) / 2;
+        
+        doc.addImage(imgData, 'PNG', x, currentY, chartWidth, chartHeight);
+        currentY += chartHeight + 15;
+        chartsAdded = true;
+        
+        console.log('Cash flow chart added successfully');
+      } else {
+        doc.text('График денежных потоков недоступен', margin, currentY);
+        currentY += 20;
+      }
     }
-  }
 
-  // График углеродных единиц
-  if (chartRefs.carbonChart && chartRefs.carbonChart.canvas) {
-    try {
+    // График углеродных единиц
+    if (chartRefs.carbonChart && chartRefs.carbonChart.canvas) {
+      console.log('Processing carbon chart for PDF...');
+      
+      // Проверяем место на странице
       if (currentY > 150) {
         doc.addPage();
         currentY = 20;
       }
       
       doc.setFontSize(12);
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('Динамика накопленных углеродных единиц', margin, currentY);
-      doc.setFont('times', 'normal');
+      doc.setFont('helvetica', 'normal');
       currentY += 8;
+
+      // Ждем полной отрисовки графика
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const canvas = chartRefs.carbonChart.canvas;
-      const imgData = canvas.toDataURL('image/png');
-      const imgProps = doc.getImageProperties(imgData);
       
-      const pdfWidth = textWidth;
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      // Ограничиваем высоту графика
-      const maxChartHeight = 80;
-      const finalHeight = Math.min(pdfHeight, maxChartHeight);
-      const finalWidth = (pdfWidth * finalHeight) / pdfHeight;
-      
-      doc.addImage(imgData, 'PNG', margin + (textWidth - finalWidth) / 2, currentY, finalWidth, finalHeight);
-      currentY += finalHeight + 20;
-      
-    } catch (error) {
-      console.error('Ошибка при добавлении графика углеродных единиц:', error);
-      doc.text('График углеродных единиц недоступен', margin, currentY);
-      currentY += 20;
+      if (canvas.width > 0 && canvas.height > 0) {
+        // Создаем временный canvas с увеличенным разрешением
+        const tempCanvas = document.createElement('canvas');
+        const ctx = tempCanvas.getContext('2d');
+        
+        const scale = 2;
+        tempCanvas.width = canvas.width * scale;
+        tempCanvas.height = canvas.height * scale;
+        
+        ctx.scale(scale, scale);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(canvas, 0, 0);
+        
+        const imgData = tempCanvas.toDataURL('image/png', 1.0);
+        
+        // Рассчитываем размеры для вставки
+        const maxChartWidth = textWidth;
+        const maxChartHeight = 80;
+        const aspectRatio = canvas.width / canvas.height;
+        
+        let chartWidth = maxChartWidth;
+        let chartHeight = chartWidth / aspectRatio;
+        
+        if (chartHeight > maxChartHeight) {
+          chartHeight = maxChartHeight;
+          chartWidth = chartHeight * aspectRatio;
+        }
+        
+        // Центрируем график
+        const x = margin + (textWidth - chartWidth) / 2;
+        
+        doc.addImage(imgData, 'PNG', x, currentY, chartWidth, chartHeight);
+        chartsAdded = true;
+        
+        console.log('Carbon chart added successfully');
+      } else {
+        doc.text('График углеродных единиц недоступен', margin, currentY);
+      }
     }
+
+  } catch (error) {
+    console.error('Error adding charts to PDF:', error);
+    doc.text('Ошибка при добавлении графиков', margin, currentY);
   }
 
-  // === 8. Выводы и рекомендации ===
-  if (currentY > 120) {
-    doc.addPage();
-    currentY = 20;
-  }
-  
-  doc.setFontSize(14);
-  doc.setFont('times', 'bold');
-  doc.text('6   ВЫВОДЫ И РЕКОМЕНДАЦИИ', margin, currentY);
-  doc.setFont('times', 'normal');
-  doc.setFontSize(12);
-  currentY += 15;
-
-  const conclusion = generateConclusion(results, inputs);
-  doc.text(conclusion, margin, currentY, { maxWidth: textWidth });
-
-  // === Сохранение ===
-  const fileName = `Отчёт_ЛКП_${inputs.treeType}_${inputs.areaHa}га_${currentDate.replace(/\./g, '-')}.pdf`;
-  doc.save(fileName);
+  return chartsAdded;
 }
 
-// Функция для генерации выводов на основе результатов
+// Функция для генерации выводов
 function generateConclusion(results, inputs) {
   const npv = results.financials.npv;
-  const irr = parseFloat(results.financials.irr) || 0;
+  const irr = results.financials.irr;
   const cuCost = results.financials.cuCost;
   
   let conclusion = '';
   
   if (npv > 0) {
-    conclusion += `Проект демонстрирует положительную экономическую эффективность с NPV ${npv.toLocaleString('ru-RU')} руб. `;
-    conclusion += `Внутренняя норма доходности составляет ${results.financials.irr}. `;
+    conclusion += `Проект демонстрирует положительную экономическую эффективность с NPV ${formatNumber(npv)} руб. `;
+    conclusion += `Внутренняя норма доходности составляет ${irr}. `;
   } else {
-    conclusion += `Проект имеет отрицательный NPV (${npv.toLocaleString('ru-RU')} руб), что свидетельствует `;
+    conclusion += `Проект имеет отрицательный NPV (${formatNumber(npv)} руб), что свидетельствует `;
     conclusion += `о его экономической нецелесообразности в текущих условиях. `;
   }
   
-  conclusion += `Себестоимость углеродной единицы составляет ${cuCost.toLocaleString('ru-RU')} руб/т. `;
+  conclusion += `Себестоимость углеродной единицы составляет ${formatNumber(cuCost)} руб/т. `;
   
   if (cuCost < inputs.carbonUnitPrice) {
-    conclusion += `При текущей цене УЕ ${inputs.carbonUnitPrice.toLocaleString('ru-RU')} руб/т проект рентабелен. `;
+    conclusion += `При текущей цене УЕ ${formatNumber(inputs.carbonUnitPrice)} руб/т проект рентабелен. `;
   } else {
     conclusion += `Требуется повышение цены УЕ или снижение затрат для достижения рентабельности. `;
   }
@@ -312,7 +441,7 @@ function generateConclusion(results, inputs) {
   conclusion += `• Мониторинг рыночных цен на углеродные единицы\n`;
   conclusion += `• Оптимизация операционных затрат\n`;
   conclusion += `• Рассмотреть возможность получения государственной поддержки\n`;
-  conclusion += `• Диверсификация источников дохода (сертификаты устойчивости)\n`;
+  conclusion += `• Диверсификация источников дохода\n`;
   conclusion += `• Страхование климатических рисков`;
   
   return conclusion;
