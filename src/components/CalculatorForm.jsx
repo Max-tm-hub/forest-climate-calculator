@@ -1,78 +1,138 @@
 import React from 'react';
-import { TREE_TYPES } from '../data/co2Increment';
+import { getSupportedTreeTypes } from '../data/co2Increment';
 
 export default function CalculatorForm({ inputs, onInputChange, onSubmit }) {
-  const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    const val = type === 'number' ? parseFloat(value) || 0 : value;
-    onInputChange(name, val);
+  const treeTypes = getSupportedTreeTypes();
+
+  const inputGroups = [
+    {
+      title: "Основные параметры проекта",
+      inputs: [
+        { name: "treeType", label: "Порода деревьев", type: "select", options: treeTypes },
+        { name: "areaHa", label: "Площадь проекта (га)", type: "number", min: 1, max: 10000 },
+        { name: "projectYears", label: "Срок проекта (лет)", type: "number", min: 1, max: 100 },
+        { name: "discountRate", label: "Ставка дисконтирования (%)", type: "number", step: 0.01, min: 0, max: 1 },
+        { name: "inflation", label: "Уровень инфляции (%)", type: "number", step: 0.01, min: 0, max: 0.5 }
+      ]
+    },
+    {
+      title: "Инвестиционные затраты",
+      inputs: [
+        { name: "landPrice", label: "Стоимость земли (руб)", type: "number" },
+        { name: "prepPerHa", label: "Подготовка территории (руб/га)", type: "number" },
+        { name: "seedlingsPerHa", label: "Саженцев на га (шт)", type: "number" },
+        { name: "seedlingCost", label: "Цена саженца (руб)", type: "number" },
+        { name: "plantingCostPerHa", label: "Посадка (руб/га)", type: "number" },
+        { name: "pestsInitialPerHa", label: "Защита от вредителей (руб/га)", type: "number" },
+        { name: "equipmentPerHa", label: "Оборудование (руб/га)", type: "number" },
+        { name: "designVerification", label: "Проектирование и верификация (руб)", type: "number" }
+      ]
+    },
+    {
+      title: "Операционные расходы",
+      inputs: [
+        { name: "weedingCostPerHa", label: "Прополка (руб/га)", type: "number" },
+        { name: "weedingFreq", label: "Частота прополки (раз/год)", type: "number", min: 0 },
+        { name: "pruningCostPerHa", label: "Обрезка (руб/га)", type: "number" },
+        { name: "pruningFreq", label: "Частота обрезки (раз/год)", type: "number", min: 0 },
+        { name: "thinningCostPerHa", label: "Прореживание (руб/га)", type: "number" }
+      ]
+    },
+    {
+      title: "Доходы и цены",
+      inputs: [
+        { name: "carbonUnitPrice", label: "Цена углеродной единицы (руб/т)", type: "number" },
+        { name: "timberPrice", label: "Цена древесины (руб/м³)", type: "number" },
+        { name: "timberVolumePerHa", label: "Объем древесины (м³/га)", type: "number" },
+        { name: "timberHarvestCost", label: "Стоимость заготовки (руб/м³)", type: "number" },
+        { name: "transportCostPerKm", label: "Транспорт (руб/км/м³)", type: "number" },
+        { name: "transportDistance", label: "Расстояние транспортировки (км)", type: "number" },
+        { name: "profitTaxRate", label: "Налог на прибыль (%)", type: "number", step: 0.01, min: 0, max: 1 }
+      ]
+    }
+  ];
+
+  const handleInputChange = (name, value) => {
+    onInputChange(name, value);
   };
 
   return (
-    <form onSubmit={onSubmit} style={{ maxWidth: '100%', padding: '20px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-        <div>
-          <label>Порода дерева</label>
-          <select name="treeType" value={inputs.treeType} onChange={handleChange}>
-            {TREE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+    <form onSubmit={onSubmit} style={{ marginBottom: '20px' }}>
+      {inputGroups.map((group, groupIndex) => (
+        <div key={groupIndex} style={{ 
+          backgroundColor: 'white', 
+          padding: '20px', 
+          borderRadius: '8px',
+          marginBottom: '20px',
+          border: '1px solid #e9ecef'
+        }}>
+          <h3 style={{ color: '#1976d2', marginBottom: '15px' }}>{group.title}</h3>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '15px' 
+          }}>
+            {group.inputs.map((input, index) => (
+              <div key={index}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  {input.label}:
+                </label>
+                {input.type === 'select' ? (
+                  <select
+                    value={inputs[input.name] || ''}
+                    onChange={(e) => handleInputChange(input.name, e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="">Выберите породу</option>
+                    {input.options.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type={input.type}
+                    value={inputs[input.name] || ''}
+                    onChange={(e) => handleInputChange(input.name, parseFloat(e.target.value) || 0)}
+                    min={input.min}
+                    max={input.max}
+                    step={input.step}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-        <Input name="areaHa" label="Площадь (га)" value={inputs.areaHa} onChange={handleChange} type="number" />
-        <Input name="projectYears" label="Срок (лет)" value={inputs.projectYears} onChange={handleChange} min="1" max="80" type="number" />
-        <Input name="discountRate" label="Ставка диск. (%)" value={inputs.discountRate * 100} onChange={(e) => handleChange({ target: { name: 'discountRate', value: parseFloat(e.target.value)/100 || 0, type: 'number' } })} type="number" step="0.1" />
-        <Input name="inflation" label="Инфляция (%)" value={inputs.inflation * 100} onChange={(e) => handleChange({ target: { name: 'inflation', value: parseFloat(e.target.value)/100 || 0, type: 'number' } })} type="number" step="0.1" />
+      ))}
 
-        <h3 style={{ gridColumn: '1 / -1' }}>Инвестиции</h3>
-        {['landPrice', 'prepPerHa', 'seedlingsPerHa', 'seedlingCost', 'plantingCostPerHa', 'pestsInitialPerHa', 'equipmentPerHa', 'designVerification'].map(field => (
-          <Input key={field} name={field} label={getLabel(field)} value={inputs[field]} onChange={handleChange} type="number" />
-        ))}
-
-        <h3 style={{ gridColumn: '1 / -1' }}>Операционные расходы и доходы</h3>
-        {['weedingCostPerHa', 'weedingFreq', 'pruningCostPerHa', 'pruningFreq', 'thinningCostPerHa', 'carbonUnitPrice', 'timberPrice', 'timberVolumePerHa', 'timberHarvestCost', 'transportCostPerKm', 'transportDistance'].map(field => (
-          <Input key={field} name={field} label={getLabel(field)} value={inputs[field]} onChange={handleChange} type="number" />
-        ))}
-
-        <h3 style={{ gridColumn: '1 / -1' }}>Налоги</h3>
-        <Input name="profitTaxRate" label="Налог на прибыль (%)" value={inputs.profitTaxRate * 100} onChange={(e) => handleChange({ target: { name: 'profitTaxRate', value: parseFloat(e.target.value)/100 || 0, type: 'number' } })} type="number" step="0.1" />
-      </div>
-
-      <button type="submit" style={{ marginTop: '20px', padding: '12px 24px', fontSize: '16px', backgroundColor: '#1976d2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-        Рассчитать
+      <button
+        type="submit"
+        style={{
+          width: '100%',
+          padding: '12px 24px',
+          backgroundColor: '#4CAF50',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontSize: '16px',
+          fontWeight: 'bold'
+        }}
+      >
+        🚀 Рассчитать проект
       </button>
     </form>
   );
-}
-
-function Input({ name, label, value, onChange, ...props }) {
-  return (
-    <div>
-      <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>{label}</label>
-      <input {...props} name={name} value={value} onChange={onChange} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
-    </div>
-  );
-}
-
-function getLabel(field) {
-  const labels = {
-    landPrice: 'Цена участка (₽)',
-    prepPerHa: 'Подготовка 1 га (₽)',
-    seedlingsPerHa: 'Саженцев на 1 га',
-    seedlingCost: 'Стоимость саженца (₽)',
-    plantingCostPerHa: 'Посадка на 1 га (₽)',
-    pestsInitialPerHa: 'Борьба с вредителями (₽/га)',
-    equipmentPerHa: 'Машины и оборудование (₽/га)',
-    designVerification: 'Проектирование и верификация (₽)',
-    weedingCostPerHa: 'Обработка от сорняков (₽/га)',
-    weedingFreq: 'Кол-во обработок в год',
-    pruningCostPerHa: 'Формирующая обрезка (₽/га)',
-    pruningFreq: 'Кол-во обрезок в год',
-    thinningCostPerHa: 'Прореживание (₽/га)',
-    carbonUnitPrice: 'Цена УЕ (₽/т)',
-    timberPrice: 'Цена древесины (₽/м³)',
-    timberVolumePerHa: 'Объём древесины (м³/га)',
-    timberHarvestCost: 'Сбор древесины (₽/м³)',
-    transportCostPerKm: 'Транспорт (₽/м³/км)',
-    transportDistance: 'Расстояние (км)'
-  };
-  return labels[field] || field;
 }
