@@ -1,3 +1,4 @@
+// exportToWord.js
 import { saveAs } from 'file-saver';
 
 // Функция для безопасного текста
@@ -210,11 +211,11 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       </tr>
       <tr>
         <td>Ставка дисконтирования</td>
-        <td>${(inputs.discountRate * 100).toFixed(1)}%</td>
+        <td>${inputs.discountRate}%</td> <!-- Исправлено: убрано умножение на 100 -->
       </tr>
       <tr>
         <td>Уровень инфляции</td>
-        <td>${(inputs.inflation * 100).toFixed(1)}%</td>
+        <td>${inputs.inflation}%</td> <!-- Исправлено: убрано умножение на 100 -->
       </tr>
       <tr>
         <td>Цена углеродной единицы</td>
@@ -223,6 +224,10 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       <tr>
         <td>Цена древесины</td>
         <td>${formatNumber(inputs.timberPrice)} руб/м³</td>
+      </tr>
+      <tr>
+        <td>Налог на прибыль</td>
+        <td>${inputs.profitTaxRate}%</td> <!-- Исправлено: убрано умножение на 100 -->
       </tr>
     </table>
   </div>
@@ -322,187 +327,4 @@ function generateWordHTML(results, inputs, chartImages = {}) {
         <div class="chart-title">ДИНАМИКА НАКОПЛЕННЫХ УГЛЕРОДНЫХ ЕДИНИЦ</div>
         <img src="${chartImages.carbonChart}" alt="График углеродных единиц" class="chart-image" />
         <div class="chart-description">Углеродные единицы показаны в тысячах тонн CO₂</div>
-      </div>
-    </div>
-    ` : '<p>График углеродных единиц недоступен</p>'}
-  </div>
-
-</div>
-
-  <!-- РАЗДЕЛИТЕЛЬ СТРАНИЦ -->
-  <div class="page-break"></div>
-
-<div class="content-wrapper">
-
-  <!-- СТРАНИЦА 3: ВЫВОДЫ И РЕКОМЕНДАЦИИ -->
-  <div class="section">
-    <h2>5. ВЫВОДЫ И РЕКОМЕНДАЦИИ</h2>
-    ${generateConclusion(results, inputs)}
-  </div>
-
-</div>
-
-  <div class="clearfix"></div>
-
-</body>
-</html>
-  `;
-}
-
-// Функция для генерации выводов
-function generateConclusion(results, inputs) {
-  const npv = results.financials.npv;
-  const irr = results.financials.irr;
-  const cuCost = results.financials.cuCost;
-  
-  let conclusion = '<p>';
-  
-  if (npv > 0) {
-    conclusion += `Проект демонстрирует положительную экономическую эффективность с NPV ${formatNumber(npv)} руб. `;
-    conclusion += `Внутренняя норма доходности составляет ${irr}. `;
-  } else {
-    conclusion += `Проект имеет отрицательный NPV (${formatNumber(npv)} руб), что свидетельствует `;
-    conclusion += `о его экономической нецелесообразности в текущих условиях. `;
-  }
-  
-  conclusion += `Себестоимость углеродной единицы составляет ${formatNumber(cuCost)} руб/т. `;
-  
-  if (cuCost < inputs.carbonUnitPrice) {
-    conclusion += `При текущей цене УЕ ${formatNumber(inputs.carbonUnitPrice)} руб/т проект рентабелен. `;
-  } else {
-    conclusion += `Требуется повышение цены УЕ или снижение затрат для достижения рентабельности. `;
-  }
-  
-  conclusion += '</p><p><strong>Рекомендации:</strong></p>';
-  conclusion += '<ul>';
-  conclusion += '<li>Мониторинг рыночных цен на углеродные единицы</li>';
-  conclusion += '<li>Оптимизация операционных затрат</li>';
-  conclusion += '<li>Рассмотреть возможность получения государственной поддержки</li>';
-  conclusion += '<li>Диверсификация источников дохода</li>';
-  conclusion += '<li>Страхование климатических рисков</li>';
-  conclusion += '</ul>';
-  
-  return conclusion;
-}
-
-// Улучшенная функция для конвертации графика в base64 с правильными размерами
-function chartToBase64(chartRef) {
-  if (!chartRef || !chartRef.canvas) {
-    console.error('Chart reference or canvas is missing');
-    return null;
-  }
-  
-  try {
-    const canvas = chartRef.canvas;
-    
-    // Проверяем, что canvas имеет содержимое
-    if (canvas.width === 0 || canvas.height === 0) {
-      console.error('Canvas has zero dimensions:', {
-        width: canvas.width,
-        height: canvas.height
-      });
-      return null;
-    }
-
-    console.log('Converting chart with dimensions:', {
-      width: canvas.width,
-      height: canvas.height
-    });
-    
-    // Создаем временный canvas с увеличенным разрешением для текста
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    
-    // Увеличиваем разрешение в 2 раза для лучшего качества текста
-    const scale = 2;
-    tempCanvas.width = canvas.width * scale;
-    tempCanvas.height = canvas.height * scale;
-    
-    // Отключаем сглаживание для текста
-    tempCtx.imageSmoothingEnabled = false;
-    tempCtx.textRendering = 'geometricPrecision';
-    
-    // Рисуем белый фон
-    tempCtx.fillStyle = '#FFFFFF';
-    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-    
-    // Масштабируем и рисуем график
-    tempCtx.scale(scale, scale);
-    tempCtx.drawImage(canvas, 0, 0);
-    
-    // Теперь уменьшаем до правильного размера для Word
-    const finalCanvas = document.createElement('canvas');
-    const finalCtx = finalCanvas.getContext('2d');
-    
-    // Правильный размер для Word - 650px
-    const targetWidth = 650;
-    const finalScale = targetWidth / tempCanvas.width;
-    finalCanvas.width = targetWidth;
-    finalCanvas.height = tempCanvas.height * finalScale;
-    
-    // Для финального сжатия используем высокое качество
-    finalCtx.imageSmoothingEnabled = true;
-    finalCtx.imageSmoothingQuality = 'high';
-    finalCtx.drawImage(tempCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
-    
-    const dataUrl = finalCanvas.toDataURL('image/png', 1.0);
-    console.log('Chart converted to base64 with correct dimensions');
-    return dataUrl;
-    
-  } catch (error) {
-    console.error('Error converting chart to base64:', error);
-    return null;
-  }
-}
-
-// Основная функция экспорта
-export async function exportToWord(results, inputs, chartRefs = {}) {
-  try {
-    console.log('Starting Word export...', {
-      hasCashFlowChart: !!chartRefs.cashFlowChart,
-      hasCarbonChart: !!chartRefs.carbonChart,
-      cashFlowCanvas: chartRefs.cashFlowChart?.canvas,
-      carbonCanvas: chartRefs.carbonChart?.canvas
-    });
-
-    // Даем время на полную отрисовку графиков
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Конвертируем графики в base64
-    const chartImages = {};
-    
-    if (chartRefs.cashFlowChart) {
-      console.log('Converting cash flow chart...');
-      chartImages.cashFlowChart = chartToBase64(chartRefs.cashFlowChart);
-      console.log('Cash flow chart converted:', !!chartImages.cashFlowChart);
-    } else {
-      console.error('Cash flow chart reference is missing');
-    }
-    
-    if (chartRefs.carbonChart) {
-      console.log('Converting carbon chart...');
-      chartImages.carbonChart = chartToBase64(chartRefs.carbonChart);
-      console.log('Carbon chart converted:', !!chartImages.carbonChart);
-    } else {
-      console.error('Carbon chart reference is missing');
-    }
-
-    // Генерируем HTML контент
-    const htmlContent = generateWordHTML(results, inputs, chartImages);
-
-    // Создаем Blob с HTML контентом
-    const blob = new Blob(['\uFEFF' + htmlContent], { 
-      type: 'application/msword;charset=utf-8'
-    });
-
-    // Сохраняем файл
-    const fileName = `Отчет_ЛКП_${inputs.treeType}_${inputs.areaHa}га_${getCurrentDate().replace(/\./g, '-')}.doc`;
-    saveAs(blob, fileName);
-    
-    console.log('Word export completed successfully');
-
-  } catch (error) {
-    console.error('Word export error:', error);
-    alert('Ошибка при создании Word документа: ' + error.message);
-  }
-}
+      </div
