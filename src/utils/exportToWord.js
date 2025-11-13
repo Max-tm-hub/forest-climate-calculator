@@ -22,7 +22,7 @@ function getCurrentDate() {
   return `${day}.${month}.${year}`;
 }
 
-// Функция для создания HTML контента для Word
+// Функция для создания HTML контента для Word с альбомными страницами для графиков
 function generateWordHTML(results, inputs, chartImages = {}) {
   const keyYears = [0, 1, 5, 10, 20, 30, 50, inputs.projectYears].filter(y => y <= inputs.projectYears);
   
@@ -41,9 +41,15 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       margin: 0;
       padding: 0;
     }
-    /* Настройка области печати - соответствует стандартным полям Word */
+    /* Настройка области печати - стандартные поля Word для книжной ориентации */
     @page {
-      margin: 2cm 1.5cm 2cm 2cm; /* верх, право, низ, лево - стандартные поля Word */
+      margin: 2cm 1.5cm 2cm 2cm;
+      size: portrait;
+    }
+    /* Альбомная ориентация для страниц с графиками */
+    .landscape-page {
+      page: landscape;
+      margin: 1.5cm;
     }
     h1 { 
       color: #2e7d32; 
@@ -68,14 +74,14 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       width: 100%; 
       border-collapse: collapse; 
       margin: 10pt 0;
-      table-layout: fixed; /* Фиксированная ширина колонок */
+      table-layout: fixed;
     }
     th, td { 
       border: 1pt solid #000; 
       padding: 4pt; 
       text-align: left;
-      word-wrap: break-word; /* Перенос длинного текста */
-      font-size: 10pt; /* Уменьшаем шрифт для таблиц */
+      word-wrap: break-word;
+      font-size: 10pt;
     }
     th { 
       background-color: #f2f2f2; 
@@ -88,10 +94,13 @@ function generateWordHTML(results, inputs, chartImages = {}) {
     .section { 
       margin-bottom: 20pt; 
     }
+    .charts-section {
+      page-break-before: always;
+    }
     .chart-container { 
       text-align: center; 
-      margin: 15pt 0; 
-      page-break-inside: avoid; /* Не разрывать страницу внутри графика */
+      margin: 15pt 0;
+      page-break-inside: avoid;
     }
     .chart-title { 
       font-weight: bold; 
@@ -99,18 +108,27 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       font-size: 11pt;
     }
     .chart-image {
-      max-width: 100%;
+      max-width: 90%;
       height: auto;
       border: 1pt solid #ddd;
+    }
+    .landscape-chart {
+      max-width: 95%;
+      max-height: 18cm;
     }
     /* Узкие колонки для таблиц */
     .col-year { width: 8%; }
     .col-number { width: 20%; }
     .col-medium { width: 30%; }
     .col-large { width: 42%; }
+    /* Разделитель страниц */
+    .page-break {
+      page-break-before: always;
+    }
   </style>
 </head>
 <body>
+  <!-- СТРАНИЦА 1: ТИТУЛЬНЫЙ ЛИСТ И ОСНОВНЫЕ ДАННЫЕ -->
   <div class="header">
     <h1>МИНИСТЕРСТВО ПРИРОДНЫХ РЕСУРСОВ И ЭКОЛОГИИ РОССИЙСКОЙ ФЕДЕРАЦИИ</h1>
     <h2>ОТЧЁТ О РАСЧЁТЕ ЭФФЕКТИВНОСТИ ЛЕСНОГО КЛИМАТИЧЕСКОГО ПРОЕКТА</h2>
@@ -227,31 +245,36 @@ function generateWordHTML(results, inputs, chartImages = {}) {
     </table>
   </div>
 
-  ${chartImages.cashFlowChart || chartImages.carbonChart ? `
-  <div class="section">
+  <!-- СТРАНИЦА 2: ГРАФИК ДЕНЕЖНЫХ ПОТОКОВ (АЛЬБОМНАЯ) -->
+  ${chartImages.cashFlowChart ? `
+  <div class="charts-section landscape-page">
     <h2>4. ГРАФИЧЕСКАЯ ВИЗУАЛИЗАЦИЯ</h2>
     
-    ${chartImages.cashFlowChart ? `
     <div class="chart-container">
       <div class="chart-title">Динамика денежных потоков</div>
-      <img src="${chartImages.cashFlowChart}" alt="График денежных потоков" class="chart-image" />
+      <img src="${chartImages.cashFlowChart}" alt="График денежных потоков" class="chart-image landscape-chart" />
       <p><em>Денежные потоки показаны в миллионах рублей</em></p>
     </div>
-    ` : '<p>График денежных потоков недоступен</p>'}
-
-    ${chartImages.carbonChart ? `
-    <div class="chart-container">
-      <div class="chart-title">Динамика накопленных углеродных единиц</div>
-      <img src="${chartImages.carbonChart}" alt="График углеродных единиц" class="chart-image" />
-      <p><em>Углеродные единицы показаны в тысячах тонн CO₂</em></p>
-    </div>
-    ` : '<p>График углеродных единиц недоступен</p>'}
   </div>
   ` : ''}
 
-  <div class="section">
-    <h2>5. ВЫВОДЫ И РЕКОМЕНДАЦИИ</h2>
-    ${generateConclusion(results, inputs)}
+  <!-- СТРАНИЦА 3: ГРАФИК УГЛЕРОДНЫХ ЕДИНИЦ (АЛЬБОМНАЯ) -->
+  ${chartImages.carbonChart ? `
+  <div class="charts-section landscape-page">
+    <div class="chart-container">
+      <div class="chart-title">Динамика накопленных углеродных единиц</div>
+      <img src="${chartImages.carbonChart}" alt="График углеродных единиц" class="chart-image landscape-chart" />
+      <p><em>Углеродные единицы показаны в тысячах тонн CO₂</em></p>
+    </div>
+  </div>
+  ` : ''}
+
+  <!-- СТРАНИЦА 4: ВЫВОДЫ И РЕКОМЕНДАЦИИ (КНИЖНАЯ) -->
+  <div class="page-break">
+    <div class="section">
+      <h2>5. ВЫВОДЫ И РЕКОМЕНДАЦИИ</h2>
+      ${generateConclusion(results, inputs)}
+    </div>
   </div>
 
 </body>
