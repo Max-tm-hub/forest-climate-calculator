@@ -6,7 +6,7 @@ export const projectTemplates = {
     areaHa: 1000,
     projectYears: 80, // Оптимальный срок для сосны
     discountRate: 0.23,
-    inflation: 0.025,
+    inflation: 0.03,
     landPrice: 500000,
     prepPerHa: 20000,
     seedlingsPerHa: 1300,
@@ -62,7 +62,7 @@ export const projectTemplates = {
     areaHa: 300,
     projectYears: 100, // Дуб - долгоживущая порода
     discountRate: 0.18,
-    inflation: 0.028,
+    inflation: 0.03,
     landPrice: 600000,
     prepPerHa: 30000,
     seedlingsPerHa: 800,
@@ -90,7 +90,7 @@ export const projectTemplates = {
     areaHa: 2000,
     projectYears: 80,
     discountRate: 0.25,
-    inflation: 0.035,
+    inflation: 0.04,
     landPrice: 400000,
     prepPerHa: 15000,
     seedlingsPerHa: 2000,
