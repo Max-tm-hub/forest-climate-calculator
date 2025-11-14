@@ -57,25 +57,28 @@ export function calculateProject(params) {
     throw new Error('Срок проекта должен быть от 1 до 100 лет');
   }
 
-  // === 1. Инвестиции ===
+  // === 1. ИНВЕСТИЦИИ ===
   const landCost = landPrice;
   const prepCost = prepPerHa * areaHa;
   const seedlingsCost = seedlingsPerHa * seedlingCost * areaHa;
   const plantingCost = plantingCostPerHa * areaHa;
   const pestsCost = pestsInitialPerHa * areaHa;
   const equipmentCost = equipmentPerHa * areaHa;
-  const totalInvestment = landCost + prepCost + seedlingsCost + plantingCost + pestsCost + equipmentCost + designVerification;
+  
+  const totalInvestment = landCost + prepCost + seedlingsCost + plantingCost + 
+                         pestsCost + equipmentCost + designVerification;
+  
   const depreciableInvestment = totalInvestment - landCost;
   const annualDepreciation = projectYears > 0 ? depreciableInvestment / projectYears : 0;
 
-  // === 2. Данные по приросту CO₂ ===
+  // === 2. ДАННЫЕ ПО ПОГЛОЩЕНИЮ CO₂ ===
   const requiredYears = projectYears + 1;
   const incrementProfile = getCO2IncrementData(treeType, requiredYears);
 
   const years = Array.from({ length: projectYears + 1 }, (_, i) => i);
   const inflationFactor = years.map(y => Math.pow(1 + inflation, y));
 
-  // === 3. Расчёт по годам ===
+  // === 3. РАСЧЕТ ПО ГОДАМ ===
   const carbonUnits = [];
   const revenues = [];
   const opex = [];
@@ -86,67 +89,99 @@ export function calculateProject(params) {
 
   for (let y = 0; y <= projectYears; y++) {
     const inf = inflationFactor[y];
-    const cu = (incrementProfile[y] * areaHa) / 1000; // тонн = УЕ
+    
+    // Поглощение CO₂
+    const cu = (incrementProfile[y] * areaHa) / 1000; // тонн CO₂
     carbonUnits[y] = cu;
 
-    // Выручка от УЕ
-    const revenueCarbon = y > 0 ? cu * carbonUnitPrice * inf : 0;
+    // ВЫРУЧКА
+    let totalRevenue = 0;
+    
+    // Выручка от углеродных единиц (ежегодно, кроме года 0)
+    if (y > 0) {
+      totalRevenue += cu * carbonUnitPrice * inf;
+    }
 
-    // Выручка от древесины — только в последний год
-    let revenueTimber = 0;
+    // Выручка от древесины (только в последний год)
     if (y === projectYears) {
       const volume = timberVolumePerHa * areaHa;
       const harvestCost = timberHarvestCost * volume;
       const transportCost = transportCostPerKm * transportDistance * volume;
-      revenueTimber = volume * timberPrice * inf - (harvestCost + transportCost) * inf;
-      timberRevenue = revenueTimber;
+      const netTimberRevenue = (volume * timberPrice - (harvestCost + transportCost)) * inf;
+      totalRevenue += netTimberRevenue;
+      timberRevenue = netTimberRevenue;
     }
-
-    const totalRevenue = revenueCarbon + revenueTimber;
+    
     revenues[y] = totalRevenue;
 
-    // Операционные расходы
+    // ОПЕРАЦИОННЫЕ РАСХОДЫ
     let annualOpex = 0;
+    
     if (y > 0) {
+      // Ежегодные операционные расходы
       annualOpex += weedingCostPerHa * weedingFreq * areaHa * inf;
       annualOpex += pruningCostPerHa * pruningFreq * areaHa * inf;
+      
+      // Прореживание каждые 10 лет
       if (y % 10 === 0 && y > 0) {
         annualOpex += thinningCostPerHa * areaHa * inf;
       }
-      annualOpex += cu * 10 * inf; // выпуск УЕ по 10 ₽
     }
+    
     opex[y] = -annualOpex;
 
-    // EBITDA
-    const ebitda = totalRevenue + opex[y];
-
-    // Прибыль до налога
+    // ФИНАНСОВЫЕ ПОКАЗАТЕЛИ
+    const ebitda = totalRevenue + opex[y]; // EBITDA = Выручка - Операционные расходы
     const profitBeforeTax = ebitda - (y > 0 ? annualDepreciation : 0);
+    const tax = Math.max(0, profitBeforeTax * profitTaxRate);
 
-    // Налог на прибыль
-    const tax = profitBeforeTax > 0 ? profitBeforeTax * profitTaxRate : 0;
-
-    // Чистый денежный поток
-    const cf = y === 0 ? -totalInvestment : ebitda - tax;
+    // ДЕНЕЖНЫЙ ПОТОК
+    let cf = 0;
+    if (y === 0) {
+      cf = -totalInvestment; // Инвестиции в год 0
+    } else {
+      // CF = EBITDA - Налоги + Амортизация
+      cf = ebitda - tax + annualDepreciation;
+    }
+    
     cashFlows[y] = cf;
     discountedCashFlows[y] = cf / Math.pow(1 + discountRate, y);
   }
 
-  // === 4. Финансовые метрики ===
+  // === 4. ФИНАНСОВЫЕ МЕТРИКИ ===
   const npv = discountedCashFlows.reduce((a, b) => a + b, 0);
   const irr = calculateIRR(cashFlows);
-  const simplePayback = cashFlows.reduce((cum, cf, i, arr) => cum < 0 ? cum + cf : cum, 0) < 0
-    ? '—' : cashFlows.findIndex((_, i, arr) => arr.slice(0, i + 1).reduce((s, x) => s + x, 0) >= 0);
-  const discountedPayback = discountedCashFlows.findIndex((_, i, arr) => arr.slice(0, i + 1).reduce((s, x) => s + x, 0) >= 0);
+  
+  // Срок окупаемости (простой)
+  let cumulative = 0;
+  let simplePayback = -1;
+  for (let i = 0; i <= projectYears; i++) {
+    cumulative += cashFlows[i];
+    if (cumulative >= 0 && simplePayback === -1) {
+      simplePayback = i;
+    }
+  }
+  
+  // Срок окупаемости (дисконтированный)
+  cumulative = 0;
+  let discountedPayback = -1;
+  for (let i = 0; i <= projectYears; i++) {
+    cumulative += discountedCashFlows[i];
+    if (cumulative >= 0 && discountedPayback === -1) {
+      discountedPayback = i;
+    }
+  }
+
   const totalCarbonUnits = carbonUnits.reduce((a, b) => a + b, 0);
-  const totalCosts = Math.abs(cashFlows[0]) + opex.slice(1).reduce((a, b) => a - b, 0);
+  const totalInvestmentCost = Math.abs(cashFlows[0]);
+  const totalOpexCost = opex.slice(1).reduce((a, b) => a + Math.abs(b), 0);
+  const totalCosts = totalInvestmentCost + totalOpexCost;
+  
   const cuCost = totalCarbonUnits > 0 ? totalCosts / totalCarbonUnits : Infinity;
-  const totalProfit = revenues.reduce((a, r, i) => a + r, 0) +
-    opex.reduce((a, o) => a + o, 0) -
-    cashFlows[0] - // инвестиции
-    cashFlows.slice(1).reduce((a, cf, i) => a + (revenues[i + 1] + opex[i + 1] - cf), 0); // ~ прибыль
-  const roi = (totalProfit / totalInvestment) * 100;
-  const profitabilityIndex = (npv + totalInvestment) / totalInvestment;
+  const totalRevenueSum = revenues.reduce((a, b) => a + b, 0);
+  const totalProfit = totalRevenueSum - totalCosts;
+  const roi = totalInvestmentCost > 0 ? (totalProfit / totalInvestmentCost) * 100 : 0;
+  const profitabilityIndex = totalInvestmentCost > 0 ? (npv + totalInvestmentCost) / totalInvestmentCost : 0;
 
   return {
     carbonUnits,
@@ -157,11 +192,11 @@ export function calculateProject(params) {
     timberRevenue,
     financials: {
       npv: Math.round(npv),
-      irr: isNaN(irr) ? '—' : (irr * 100).toFixed(2) + '%',
+      irr: isNaN(irr) ? '—' : (irr * 100).toFixed(1) + '%',
       simplePayback: simplePayback === -1 ? '—' : simplePayback,
       discountedPayback: discountedPayback === -1 ? '—' : discountedPayback,
       cuCost: Math.round(cuCost),
-      roi: Math.round(roi) + '%',
+      roi: roi.toFixed(1) + '%',
       profitabilityIndex: parseFloat(profitabilityIndex.toFixed(3)),
     }
   };
