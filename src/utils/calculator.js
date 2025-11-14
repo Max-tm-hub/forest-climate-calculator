@@ -77,6 +77,7 @@ export function calculateProject(params) {
 
   // === 3. Расчёт по годам ===
   const carbonUnits = [];
+  const annualCarbonIncrement = []; // Прирост за год
   const revenues = [];
   const opex = [];
   const cashFlows = [];
@@ -87,12 +88,21 @@ export function calculateProject(params) {
   for (let y = 0; y <= projectYears; y++) {
     const inf = inflationFactor[y];
     
-    // Используем накопительные данные напрямую
+    // Используем накопительные данные
     const cumulativeCarbon = cumulativeCarbonData[y] * areaHa; // тонн CO₂
     carbonUnits[y] = cumulativeCarbon;
 
-    // Выручка от УЕ - продаем накопленные единицы в конце каждого года
-    const revenueCarbon = y > 0 ? cumulativeCarbon * carbonUnitPrice * inf : 0;
+    // Рассчитываем прирост за текущий год
+    let annualCarbon = 0;
+    if (y === 0) {
+      annualCarbon = 0;
+    } else {
+      annualCarbon = cumulativeCarbon - carbonUnits[y - 1];
+    }
+    annualCarbonIncrement[y] = annualCarbon;
+
+    // ВЫРУЧКА ОТ УЕ - продаем только ПРИРОСТ за текущий год, а не все накопленные!
+    const revenueCarbon = y > 0 ? annualCarbon * carbonUnitPrice * inf : 0;
 
     // Выручка от древесины — только в последний год
     let revenueTimber = 0;
@@ -141,18 +151,23 @@ export function calculateProject(params) {
   const simplePayback = cashFlows.reduce((cum, cf, i, arr) => cum < 0 ? cum + cf : cum, 0) < 0
     ? '—' : cashFlows.findIndex((_, i, arr) => arr.slice(0, i + 1).reduce((s, x) => s + x, 0) >= 0);
   const discountedPayback = discountedCashFlows.findIndex((_, i, arr) => arr.slice(0, i + 1).reduce((s, x) => s + x, 0) >= 0);
-  const totalCarbonUnits = carbonUnits[carbonUnits.length - 1]; // Последнее значение - общее накопление
+  
+  // Общее количество УЕ за весь период - сумма годовых приростов
+  const totalCarbonUnits = annualCarbonIncrement.reduce((sum, increment) => sum + increment, 0);
   const totalCosts = Math.abs(cashFlows[0]) + opex.slice(1).reduce((a, b) => a - b, 0);
   const cuCost = totalCarbonUnits > 0 ? totalCosts / totalCarbonUnits : Infinity;
+  
   const totalProfit = revenues.reduce((a, r, i) => a + r, 0) +
     opex.reduce((a, o) => a + o, 0) -
     cashFlows[0] - // инвестиции
-    cashFlows.slice(1).reduce((a, cf, i) => a + (revenues[i + 1] + opex[i + 1] - cf), 0); // ~ прибыль
+    cashFlows.slice(1).reduce((a, cf, i) => a + (revenues[i + 1] + opex[i + 1] - cf), 0);
+    
   const roi = (totalProfit / totalInvestment) * 100;
   const profitabilityIndex = (npv + totalInvestment) / totalInvestment;
 
   return {
     carbonUnits,
+    annualCarbonIncrement, // Добавляем годовые приросты для отладки
     revenues,
     opex,
     cashFlows,
@@ -166,6 +181,7 @@ export function calculateProject(params) {
       cuCost: Math.round(cuCost),
       roi: Math.round(roi) + '%',
       profitabilityIndex: parseFloat(profitabilityIndex.toFixed(3)),
+      totalCarbonUnits: Math.round(totalCarbonUnits) // Общее количество проданных УЕ
     }
   };
 }
