@@ -34,7 +34,7 @@ export function calculateProject(params) {
     equipmentPerHa = 20000, designVerification = 600000,
     weedingCostPerHa = 5000, weedingFreq = 2,
     pruningCostPerHa = 1000, pruningFreq = 1,
-    thinningCostPerHa = 120000,
+    thinningCostPerHa = 120000, thinningFreq = 10,
     carbonUnitPrice = 1100, timberPrice = 1900,
     timberVolumePerHa = 200, timberHarvestCost = 50,
     transportCostPerKm = 10, transportDistance = 50,
@@ -44,12 +44,11 @@ export function calculateProject(params) {
   if (!treeType) {
     throw new Error('Не выбрана порода деревьев');
   }
-  
+
   if (!isTreeTypeSupported(treeType)) {
     const supportedTypes = getSupportedTreeTypes();
     throw new Error(
-      `Порода "${treeType}" не поддерживается. ` +
-      `Доступные породы: ${supportedTypes.join(', ')}`
+      `Порода "${treeType}" не поддерживается. Доступные породы: ${supportedTypes.join(', ')}`
     );
   }
 
@@ -57,131 +56,78 @@ export function calculateProject(params) {
     throw new Error('Срок проекта должен быть от 1 до 100 лет');
   }
 
-  // === 1. ИНВЕСТИЦИИ ===
+  // === 1. Инвестиции ===
   const landCost = landPrice;
   const prepCost = prepPerHa * areaHa;
   const seedlingsCost = seedlingsPerHa * seedlingCost * areaHa;
   const plantingCost = plantingCostPerHa * areaHa;
   const pestsCost = pestsInitialPerHa * areaHa;
   const equipmentCost = equipmentPerHa * areaHa;
-  
-  const totalInvestment = landCost + prepCost + seedlingsCost + plantingCost + 
-                         pestsCost + equipmentCost + designVerification;
-  
+  const totalInvestment = landCost + prepCost + seedlingsCost + plantingCost + pestsCost + equipmentCost + designVerification;
   const depreciableInvestment = totalInvestment - landCost;
   const annualDepreciation = projectYears > 0 ? depreciableInvestment / projectYears : 0;
 
-  // === 2. ДАННЫЕ ПО ПОГЛОЩЕНИЮ CO₂ ===
+  // === 2. Данные по приросту CO₂ ===
   const requiredYears = projectYears + 1;
   const incrementProfile = getCO2IncrementData(treeType, requiredYears);
 
-  const years = Array.from({ length: projectYears + 1 }, (_, i) => i);
-  const inflationFactor = years.map(y => Math.pow(1 + inflation, y));
+  // Массивы для хранения результатов по годам
+  const carbonUnits = Array(requiredYears).fill(0);
+  const revenues = Array(requiredYears).fill(0);
+  const opex = Array(requiredYears).fill(0);
+  const cashFlows = Array(requiredYears).fill(0);
+  const discountedCashFlows = Array(requiredYears).fill(0);
+  const timberRevenue = Array(requiredYears).fill(0);
 
-  // === 3. РАСЧЕТ ПО ГОДАМ ===
-  const carbonUnits = [];
-  const revenues = [];
-  const opex = [];
-  const cashFlows = [];
-  const discountedCashFlows = [];
+  // === 3. Расчёт денежных потоков по годам ===
+  for (let y = 0; y < requiredYears; y++) {
+    // Расчёт поглощения CO₂
+    carbonUnits[y] = incrementProfile[y] * areaHa / 1000;
 
-  let timberRevenue = 0;
+    // Расчёт доходов
+    const carbonRevenue = carbonUnits[y] * carbonUnitPrice;
+    timberRevenue[y] = (y === projectYears) ? timberPrice * timberVolumePerHa * areaHa : 0;
+    revenues[y] = carbonRevenue + timberRevenue[y];
 
-  for (let y = 0; y <= projectYears; y++) {
-    const inf = inflationFactor[y];
-    
-    // Поглощение CO₂
-    const cu = (incrementProfile[y] * areaHa) / 1000; // тонн CO₂
-    carbonUnits[y] = cu;
-
-    // ВЫРУЧКА
-    let totalRevenue = 0;
-    
-    // Выручка от углеродных единиц (ежегодно, кроме года 0)
-    if (y > 0) {
-      totalRevenue += cu * carbonUnitPrice * inf;
-    }
-
-    // Выручка от древесины (только в последний год)
-    if (y === projectYears) {
-      const volume = timberVolumePerHa * areaHa;
-      const harvestCost = timberHarvestCost * volume;
-      const transportCost = transportCostPerKm * transportDistance * volume;
-      const netTimberRevenue = (volume * timberPrice - (harvestCost + transportCost)) * inf;
-      totalRevenue += netTimberRevenue;
-      timberRevenue = netTimberRevenue;
-    }
-    
-    revenues[y] = totalRevenue;
-
-    // ОПЕРАЦИОННЫЕ РАСХОДЫ
-    let annualOpex = 0;
-    
-    if (y > 0) {
-      // Ежегодные операционные расходы
-      annualOpex += weedingCostPerHa * weedingFreq * areaHa * inf;
-      annualOpex += pruningCostPerHa * pruningFreq * areaHa * inf;
-      
-      // Прореживание каждые 10 лет
-      if (y % 10 === 0 && y > 0) {
-        annualOpex += thinningCostPerHa * areaHa * inf;
+    // Расчёт операционных расходов
+    if (y === 0) {
+      opex[y] = -(prepCost + pestsCost + plantingCost + equipmentCost + designVerification);
+    } else {
+      opex[y] = -(weedingCostPerHa * weedingFreq + pruningCostPerHa * pruningFreq) * areaHa;
+      if (y % thinningFreq === 0) {
+        opex[y] -= thinningCostPerHa * areaHa;
       }
     }
-    
-    opex[y] = -annualOpex;
 
-    // ФИНАНСОВЫЕ ПОКАЗАТЕЛИ
-    const ebitda = totalRevenue + opex[y]; // EBITDA = Выручка - Операционные расходы
+    // EBITDA
+    const ebitda = revenues[y] - Math.abs(opex[y]);
+
+    // Прибыль до налога
     const profitBeforeTax = ebitda - (y > 0 ? annualDepreciation : 0);
-    const tax = Math.max(0, profitBeforeTax * profitTaxRate);
 
-    // ДЕНЕЖНЫЙ ПОТОК
-    let cf = 0;
-    if (y === 0) {
-      cf = -totalInvestment; // Инвестиции в год 0
-    } else {
-      // CF = EBITDA - Налоги + Амортизация
-      cf = ebitda - tax + annualDepreciation;
-    }
-    
-    cashFlows[y] = cf;
-    discountedCashFlows[y] = cf / Math.pow(1 + discountRate, y);
+    // Налог на прибыль
+    const tax = profitBeforeTax > 0 ? profitBeforeTax * profitTaxRate : 0;
+
+    // Чистый денежный поток
+    cashFlows[y] = y === 0 ? -totalInvestment : ebitda - tax;
+    discountedCashFlows[y] = cashFlows[y] / Math.pow(1 + discountRate, y);
   }
 
-  // === 4. ФИНАНСОВЫЕ МЕТРИКИ ===
+  // === 4. Финансовые метрики ===
   const npv = discountedCashFlows.reduce((a, b) => a + b, 0);
   const irr = calculateIRR(cashFlows);
-  
-  // Срок окупаемости (простой)
-  let cumulative = 0;
-  let simplePayback = -1;
-  for (let i = 0; i <= projectYears; i++) {
-    cumulative += cashFlows[i];
-    if (cumulative >= 0 && simplePayback === -1) {
-      simplePayback = i;
-    }
-  }
-  
-  // Срок окупаемости (дисконтированный)
-  cumulative = 0;
-  let discountedPayback = -1;
-  for (let i = 0; i <= projectYears; i++) {
-    cumulative += discountedCashFlows[i];
-    if (cumulative >= 0 && discountedPayback === -1) {
-      discountedPayback = i;
-    }
-  }
-
+  const simplePayback = cashFlows.reduce((cum, cf, i, arr) => cum < 0 ? cum + cf : cum, 0) < 0
+    ? '—' : cashFlows.findIndex((_, i, arr) => arr.slice(0, i + 1).reduce((s, x) => s + x, 0) >= 0);
+  const discountedPayback = discountedCashFlows.findIndex((_, i, arr) => arr.slice(0, i + 1).reduce((s, x) => s + x, 0) >= 0);
   const totalCarbonUnits = carbonUnits.reduce((a, b) => a + b, 0);
-  const totalInvestmentCost = Math.abs(cashFlows[0]);
-  const totalOpexCost = opex.slice(1).reduce((a, b) => a + Math.abs(b), 0);
-  const totalCosts = totalInvestmentCost + totalOpexCost;
-  
+  const totalCosts = Math.abs(cashFlows[0]) + opex.slice(1).reduce((a, b) => a + b, 0);
   const cuCost = totalCarbonUnits > 0 ? totalCosts / totalCarbonUnits : Infinity;
-  const totalRevenueSum = revenues.reduce((a, b) => a + b, 0);
-  const totalProfit = totalRevenueSum - totalCosts;
-  const roi = totalInvestmentCost > 0 ? (totalProfit / totalInvestmentCost) * 100 : 0;
-  const profitabilityIndex = totalInvestmentCost > 0 ? (npv + totalInvestmentCost) / totalInvestmentCost : 0;
+  const totalProfit = revenues.reduce((a, r, i) => a + r, 0) +
+    opex.reduce((a, o) => a + o, 0) -
+    cashFlows[0] -
+    cashFlows.slice(1).reduce((a, cf, i) => a + (revenues[i + 1] + opex[i + 1] - cf), 0);
+  const roi = (totalProfit / totalInvestment) * 100;
+  const profitabilityIndex = (npv + totalInvestment) / totalInvestment;
 
   return {
     carbonUnits,
@@ -192,11 +138,11 @@ export function calculateProject(params) {
     timberRevenue,
     financials: {
       npv: Math.round(npv),
-      irr: isNaN(irr) ? '—' : (irr * 100).toFixed(1) + '%',
+      irr: isNaN(irr) ? '—' : (irr * 100).toFixed(2) + '%',
       simplePayback: simplePayback === -1 ? '—' : simplePayback,
       discountedPayback: discountedPayback === -1 ? '—' : discountedPayback,
       cuCost: Math.round(cuCost),
-      roi: roi.toFixed(1) + '%',
+      roi: Math.round(roi) + '%',
       profitabilityIndex: parseFloat(profitabilityIndex.toFixed(3)),
     }
   };
