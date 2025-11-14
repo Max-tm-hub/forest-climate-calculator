@@ -82,6 +82,7 @@ export function calculateProject(params) {
   const opex = [];
   const cashFlows = [];
   const discountedCashFlows = [];
+  const cumulativeDiscountedCashFlows = []; // НАРАСТАЮЩИЙ ИТОГ дисконтированных потоков
 
   let timberRevenue = 0;
 
@@ -145,33 +146,54 @@ export function calculateProject(params) {
     discountedCashFlows[y] = cf / Math.pow(1 + discountRate, y);
   }
 
-  // === 4. Финансовые метрики ===
-  const npv = discountedCashFlows.reduce((a, b) => a + b, 0);
+  // === 4. Расчет нарастающего итога дисконтированных денежных потоков ===
+  let cumulativeDCF = 0;
+  for (let y = 0; y <= projectYears; y++) {
+    cumulativeDCF += discountedCashFlows[y];
+    cumulativeDiscountedCashFlows[y] = cumulativeDCF;
+  }
+
+  // === 5. Финансовые метрики ===
+  const npv = cumulativeDiscountedCashFlows[projectYears]; // NPV это конечное значение нарастающего итога
+  
+  // ПРАВИЛЬНЫЙ расчет ROI: (NPV + Инвестиции) / Инвестиции
+  const roi = totalInvestment > 0 ? ((npv + totalInvestment) / totalInvestment) * 100 : 0;
+  
   const irr = calculateIRR(cashFlows);
-  const simplePayback = cashFlows.reduce((cum, cf, i, arr) => cum < 0 ? cum + cf : cum, 0) < 0
-    ? '—' : cashFlows.findIndex((_, i, arr) => arr.slice(0, i + 1).reduce((s, x) => s + x, 0) >= 0);
-  const discountedPayback = discountedCashFlows.findIndex((_, i, arr) => arr.slice(0, i + 1).reduce((s, x) => s + x, 0) >= 0);
+  
+  // Срок окупаемости (простой)
+  let simplePayback = -1;
+  let cumulativeCF = 0;
+  for (let y = 0; y <= projectYears; y++) {
+    cumulativeCF += cashFlows[y];
+    if (cumulativeCF >= 0 && simplePayback === -1) {
+      simplePayback = y;
+    }
+  }
+  
+  // Дисконтированный срок окупаемости
+  let discountedPayback = -1;
+  for (let y = 0; y <= projectYears; y++) {
+    if (cumulativeDiscountedCashFlows[y] >= 0 && discountedPayback === -1) {
+      discountedPayback = y;
+    }
+  }
   
   // Общее количество УЕ за весь период - сумма годовых приростов
   const totalCarbonUnits = annualCarbonIncrement.reduce((sum, increment) => sum + increment, 0);
   const totalCosts = Math.abs(cashFlows[0]) + opex.slice(1).reduce((a, b) => a - b, 0);
   const cuCost = totalCarbonUnits > 0 ? totalCosts / totalCarbonUnits : Infinity;
   
-  const totalProfit = revenues.reduce((a, r, i) => a + r, 0) +
-    opex.reduce((a, o) => a + o, 0) -
-    cashFlows[0] - // инвестиции
-    cashFlows.slice(1).reduce((a, cf, i) => a + (revenues[i + 1] + opex[i + 1] - cf), 0);
-    
-  const roi = (totalProfit / totalInvestment) * 100;
-  const profitabilityIndex = (npv + totalInvestment) / totalInvestment;
+  const profitabilityIndex = totalInvestment > 0 ? (npv + totalInvestment) / totalInvestment : 0;
 
   return {
     carbonUnits,
-    annualCarbonIncrement, // Добавляем годовые приросты для отладки
+    annualCarbonIncrement,
     revenues,
     opex,
     cashFlows,
     discountedCashFlows,
+    cumulativeDiscountedCashFlows, // Добавляем нарастающий итог
     timberRevenue,
     financials: {
       npv: Math.round(npv),
@@ -181,7 +203,8 @@ export function calculateProject(params) {
       cuCost: Math.round(cuCost),
       roi: Math.round(roi) + '%',
       profitabilityIndex: parseFloat(profitabilityIndex.toFixed(3)),
-      totalCarbonUnits: Math.round(totalCarbonUnits) // Общее количество проданных УЕ
+      totalCarbonUnits: Math.round(totalCarbonUnits),
+      totalInvestment: Math.round(totalInvestment)
     }
   };
 }
