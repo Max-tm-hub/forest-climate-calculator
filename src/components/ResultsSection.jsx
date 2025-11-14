@@ -125,39 +125,23 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     }]
   };
 
-  // График денежных потоков (годовые значения)
+  // График денежных потоков (годовые значения) - ТОЛЬКО ЧИСТЫЙ ДП
   const cashFlowValues = normalizeData(optimizedYears.map(i => results.cashFlows[i]), 1000000);
-  const discountedFlowValues = normalizeData(optimizedYears.map(i => results.discountedCashFlows[i]), 1000000);
 
   const cashFlowData = {
     labels: optimizedYears.map(y => y.toString()),
     datasets: [
       {
-        label: 'Чистый ДП (млн ₽)',
+        label: 'Чистый денежный поток (млн ₽)',
         data: cashFlowValues,
         backgroundColor: 'rgba(25, 118, 210, 0.7)',
-        order: 2,
         barPercentage: 0.6,
         categoryPercentage: 0.8
-      },
-      {
-        label: 'Дисконтированный ДП (млн ₽)',
-        data: discountedFlowValues,
-        borderColor: '#d32f2f',
-        backgroundColor: 'transparent',
-        type: 'line',
-        order: 1,
-        borderWidth: 2,
-        pointBackgroundColor: '#d32f2f',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 1,
-        pointRadius: 3,
-        tension: 0.1
       }
     ]
   };
 
-  // НОВЫЙ ГРАФИК: Нарастающий итог дисконтированных денежных потоков
+  // График нарастающего итога дисконтированных денежных потоков
   const cumulativeDiscountedValues = normalizeData(optimizedYears.map(i => 
     results.cumulativeDiscountedCashFlows ? results.cumulativeDiscountedCashFlows[i] : 0
   ), 1000000);
@@ -179,7 +163,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     }]
   };
 
-  const cashFlowBounds = getYAxisBounds([...cashFlowValues, ...discountedFlowValues]);
+  const cashFlowBounds = getYAxisBounds(cashFlowValues);
   const carbonBounds = getYAxisBounds(carbonDataValues);
   const cumulativeBounds = getYAxisBounds(cumulativeDiscountedValues);
 
