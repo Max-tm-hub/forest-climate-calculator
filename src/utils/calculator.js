@@ -34,7 +34,7 @@ export function calculateProject(params) {
     equipmentPerHa = 20000, designVerification = 600000,
     weedingCostPerHa = 5000, weedingFreq = 2,
     pruningCostPerHa = 1000, pruningFreq = 1,
-    thinningCostPerHa = 120000, thinningFreq = 10,
+    thinningCostPerHa = 120000,
     carbonUnitPrice = 1100, timberPrice = 1900,
     timberVolumePerHa = 200, timberHarvestCost = 50,
     transportCostPerKm = 10, transportDistance = 50,
@@ -44,11 +44,12 @@ export function calculateProject(params) {
   if (!treeType) {
     throw new Error('Не выбрана порода деревьев');
   }
-
+  
   if (!isTreeTypeSupported(treeType)) {
     const supportedTypes = getSupportedTreeTypes();
     throw new Error(
-      `Порода "${treeType}" не поддерживается. Доступные породы: ${supportedTypes.join(', ')}`
+      `Порода "${treeType}" не поддерживается. ` +
+      `Доступные породы: ${supportedTypes.join(', ')}`
     );
   }
 
@@ -69,38 +70,58 @@ export function calculateProject(params) {
 
   // === 2. Данные по приросту CO₂ ===
   const requiredYears = projectYears + 1;
-  const incrementProfile = getCO2IncrementData(treeType, requiredYears);
+  const cumulativeCarbonData = getCO2IncrementData(treeType, requiredYears);
 
-  // Массивы для хранения результатов по годам
-  const carbonUnits = Array(requiredYears).fill(0);
-  const revenues = Array(requiredYears).fill(0);
-  const opex = Array(requiredYears).fill(0);
-  const cashFlows = Array(requiredYears).fill(0);
-  const discountedCashFlows = Array(requiredYears).fill(0);
-  const timberRevenue = Array(requiredYears).fill(0);
+  const years = Array.from({ length: projectYears + 1 }, (_, i) => i);
+  const inflationFactor = years.map(y => Math.pow(1 + inflation, y));
 
-  // === 3. Расчёт денежных потоков по годам ===
-  for (let y = 0; y < requiredYears; y++) {
-    // Расчёт поглощения CO₂
-    carbonUnits[y] = incrementProfile[y] * areaHa / 1000;
+  // === 3. Расчёт по годам ===
+  const carbonUnits = [];
+  const revenues = [];
+  const opex = [];
+  const cashFlows = [];
+  const discountedCashFlows = [];
 
-    // Расчёт доходов
-    const carbonRevenue = carbonUnits[y] * carbonUnitPrice;
-    timberRevenue[y] = (y === projectYears) ? timberPrice * timberVolumePerHa * areaHa : 0;
-    revenues[y] = carbonRevenue + timberRevenue[y];
+  let timberRevenue = 0;
 
-    // Расчёт операционных расходов
-    if (y === 0) {
-      opex[y] = -(prepCost + pestsCost + plantingCost + equipmentCost + designVerification);
-    } else {
-      opex[y] = -(weedingCostPerHa * weedingFreq + pruningCostPerHa * pruningFreq) * areaHa;
-      if (y % thinningFreq === 0) {
-        opex[y] -= thinningCostPerHa * areaHa;
-      }
+  for (let y = 0; y <= projectYears; y++) {
+    const inf = inflationFactor[y];
+    
+    // Используем накопительные данные напрямую
+    const cumulativeCarbon = cumulativeCarbonData[y] * areaHa; // тонн CO₂
+    carbonUnits[y] = cumulativeCarbon;
+
+    // Выручка от УЕ - продаем накопленные единицы в конце каждого года
+    const revenueCarbon = y > 0 ? cumulativeCarbon * carbonUnitPrice * inf : 0;
+
+    // Выручка от древесины — только в последний год
+    let revenueTimber = 0;
+    if (y === projectYears) {
+      const volume = timberVolumePerHa * areaHa;
+      const harvestCost = timberHarvestCost * volume;
+      const transportCost = transportCostPerKm * transportDistance * volume;
+      revenueTimber = volume * timberPrice * inf - (harvestCost + transportCost) * inf;
+      timberRevenue = revenueTimber;
     }
 
+    const totalRevenue = revenueCarbon + revenueTimber;
+    revenues[y] = totalRevenue;
+
+    // Операционные расходы
+    let annualOpex = 0;
+    if (y > 0) {
+      annualOpex += weedingCostPerHa * weedingFreq * areaHa * inf;
+      annualOpex += pruningCostPerHa * pruningFreq * areaHa * inf;
+      if (y % 10 === 0 && y > 0) {
+        annualOpex += thinningCostPerHa * areaHa * inf;
+      }
+      // ФИКСИРОВАННЫЕ затраты на мониторинг и верификацию
+      annualOpex += 50000 * inf; // мониторинг, отчетность, администрирование
+    }
+    opex[y] = -annualOpex;
+
     // EBITDA
-    const ebitda = revenues[y] - Math.abs(opex[y]);
+    const ebitda = totalRevenue + opex[y];
 
     // Прибыль до налога
     const profitBeforeTax = ebitda - (y > 0 ? annualDepreciation : 0);
@@ -109,8 +130,9 @@ export function calculateProject(params) {
     const tax = profitBeforeTax > 0 ? profitBeforeTax * profitTaxRate : 0;
 
     // Чистый денежный поток
-    cashFlows[y] = y === 0 ? -totalInvestment : ebitda - tax;
-    discountedCashFlows[y] = cashFlows[y] / Math.pow(1 + discountRate, y);
+    const cf = y === 0 ? -totalInvestment : ebitda - tax;
+    cashFlows[y] = cf;
+    discountedCashFlows[y] = cf / Math.pow(1 + discountRate, y);
   }
 
   // === 4. Финансовые метрики ===
@@ -119,13 +141,13 @@ export function calculateProject(params) {
   const simplePayback = cashFlows.reduce((cum, cf, i, arr) => cum < 0 ? cum + cf : cum, 0) < 0
     ? '—' : cashFlows.findIndex((_, i, arr) => arr.slice(0, i + 1).reduce((s, x) => s + x, 0) >= 0);
   const discountedPayback = discountedCashFlows.findIndex((_, i, arr) => arr.slice(0, i + 1).reduce((s, x) => s + x, 0) >= 0);
-  const totalCarbonUnits = carbonUnits.reduce((a, b) => a + b, 0);
-  const totalCosts = Math.abs(cashFlows[0]) + opex.slice(1).reduce((a, b) => a + b, 0);
+  const totalCarbonUnits = carbonUnits[carbonUnits.length - 1]; // Последнее значение - общее накопление
+  const totalCosts = Math.abs(cashFlows[0]) + opex.slice(1).reduce((a, b) => a - b, 0);
   const cuCost = totalCarbonUnits > 0 ? totalCosts / totalCarbonUnits : Infinity;
   const totalProfit = revenues.reduce((a, r, i) => a + r, 0) +
     opex.reduce((a, o) => a + o, 0) -
-    cashFlows[0] -
-    cashFlows.slice(1).reduce((a, cf, i) => a + (revenues[i + 1] + opex[i + 1] - cf), 0);
+    cashFlows[0] - // инвестиции
+    cashFlows.slice(1).reduce((a, cf, i) => a + (revenues[i + 1] + opex[i + 1] - cf), 0); // ~ прибыль
   const roi = (totalProfit / totalInvestment) * 100;
   const profitabilityIndex = (npv + totalInvestment) / totalInvestment;
 
