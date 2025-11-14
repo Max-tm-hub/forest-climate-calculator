@@ -18,7 +18,7 @@ export default function ExportButtons({ results, inputs, chartRefs }) {
     }
 
     // Проверяем наличие ссылок на графики
-    if (!chartRefs.cashFlowChart || !chartRefs.carbonChart) {
+    if (!chartRefs.cashFlowChart || !chartRefs.carbonChart || !chartRefs.cumulativeChart) {
       alert('Графики еще не готовы. Подождите несколько секунд после расчета и попробуйте снова.');
       return;
     }
@@ -26,18 +26,20 @@ export default function ExportButtons({ results, inputs, chartRefs }) {
     // Дополнительная проверка, что canvas графиков действительно отрисованы
     const cashFlowCanvas = chartRefs.cashFlowChart.canvas;
     const carbonCanvas = chartRefs.carbonChart.canvas;
+    const cumulativeCanvas = chartRefs.cumulativeChart.canvas;
     
-    if (!cashFlowCanvas || !carbonCanvas) {
+    if (!cashFlowCanvas || !carbonCanvas || !cumulativeCanvas) {
       alert('Графики не инициализированы. Перезагрузите страницу и попробуйте снова.');
       return;
     }
 
     console.log('Canvas dimensions:', {
       cashFlow: { width: cashFlowCanvas.width, height: cashFlowCanvas.height },
-      carbon: { width: carbonCanvas.width, height: carbonCanvas.height }
+      carbon: { width: carbonCanvas.width, height: carbonCanvas.height },
+      cumulative: { width: cumulativeCanvas.width, height: cumulativeCanvas.height }
     });
 
-    if (cashFlowCanvas.width === 0 || carbonCanvas.width === 0) {
+    if (cashFlowCanvas.width === 0 || carbonCanvas.width === 0 || cumulativeCanvas.width === 0) {
       alert('Графики еще не отрисованы. Подождите немного и попробуйте снова.');
       return;
     }
