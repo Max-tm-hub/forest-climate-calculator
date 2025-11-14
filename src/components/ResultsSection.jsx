@@ -26,45 +26,40 @@ ChartJS.register(
 export default function ResultsSection({ results, inputs, onChartsReady }) {
   const cashFlowChartRef = useRef(null);
   const carbonChartRef = useRef(null);
+  const cumulativeChartRef = useRef(null);
   const chartsReadyRef = useRef(false);
 
   // Стабильная функция для уведомления о готовности графиков
   const notifyChartsReady = useCallback(() => {
-    if (results && onChartsReady && cashFlowChartRef.current && carbonChartRef.current && !chartsReadyRef.current) {
-      console.log('All charts are ready, notifying parent...', {
-        cashFlow: !!cashFlowChartRef.current,
-        carbon: !!carbonChartRef.current,
-        cashFlowCanvas: cashFlowChartRef.current?.canvas,
-        carbonCanvas: carbonChartRef.current?.canvas
-      });
+    if (results && onChartsReady && cashFlowChartRef.current && carbonChartRef.current && cumulativeChartRef.current && !chartsReadyRef.current) {
+      console.log('All charts are ready, notifying parent...');
       
       chartsReadyRef.current = true;
       
-      // Даем время на полный рендеринг графиков
       setTimeout(() => {
         onChartsReady({
           cashFlowChart: cashFlowChartRef.current,
-          carbonChart: carbonChartRef.current
+          carbonChart: carbonChartRef.current,
+          cumulativeChart: cumulativeChartRef.current
         });
       }, 1500);
     }
   }, [onChartsReady, results]);
 
   useEffect(() => {
-    // Сбрасываем флаг при новом расчете
     if (results) {
       chartsReadyRef.current = false;
     }
   }, [results]);
 
   useEffect(() => {
-    // Проверяем готовность графиков при каждом обновлении refs
-    if (cashFlowChartRef.current && carbonChartRef.current) {
+    if (cashFlowChartRef.current && carbonChartRef.current && cumulativeChartRef.current) {
       const cashFlowCanvas = cashFlowChartRef.current.canvas;
       const carbonCanvas = carbonChartRef.current.canvas;
+      const cumulativeCanvas = cumulativeChartRef.current.canvas;
       
-      if (cashFlowCanvas && carbonCanvas && 
-          cashFlowCanvas.width > 0 && carbonCanvas.width > 0) {
+      if (cashFlowCanvas && carbonCanvas && cumulativeCanvas && 
+          cashFlowCanvas.width > 0 && carbonCanvas.width > 0 && cumulativeCanvas.width > 0) {
         notifyChartsReady();
       }
     }
@@ -108,6 +103,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     };
   };
 
+  // График накопленных углеродных единиц
   const carbonDataValues = optimizedYears.map(i => {
     return results.carbonUnits.slice(0, i + 1).reduce((sum, value) => sum + value, 0) / 1000;
   });
@@ -129,6 +125,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     }]
   };
 
+  // График денежных потоков (годовые значения)
   const cashFlowValues = normalizeData(optimizedYears.map(i => results.cashFlows[i]), 1000000);
   const discountedFlowValues = normalizeData(optimizedYears.map(i => results.discountedCashFlows[i]), 1000000);
 
@@ -160,8 +157,31 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     ]
   };
 
+  // НОВЫЙ ГРАФИК: Нарастающий итог дисконтированных денежных потоков
+  const cumulativeDiscountedValues = normalizeData(optimizedYears.map(i => 
+    results.cumulativeDiscountedCashFlows ? results.cumulativeDiscountedCashFlows[i] : 0
+  ), 1000000);
+
+  const cumulativeData = {
+    labels: optimizedYears.map(y => y.toString()),
+    datasets: [{
+      label: 'Нарастающий итог ДДП (млн ₽)',
+      data: cumulativeDiscountedValues,
+      borderColor: '#ff9800',
+      backgroundColor: 'rgba(255, 152, 0, 0.1)',
+      tension: 0.3,
+      fill: true,
+      pointBackgroundColor: '#ff9800',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      pointRadius: 3,
+      borderWidth: 2
+    }]
+  };
+
   const cashFlowBounds = getYAxisBounds([...cashFlowValues, ...discountedFlowValues]);
   const carbonBounds = getYAxisBounds(carbonDataValues);
+  const cumulativeBounds = getYAxisBounds(cumulativeDiscountedValues);
 
   const cashFlowChartOptions = {
     responsive: true,
@@ -293,7 +313,7 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
               label += ': ';
             }
             if (context.parsed.y !== null) {
-              label += context.parsed.y.toFixed(3) + ' тыс. т'; // 3 знака после запятой
+              label += context.parsed.y.toFixed(3) + ' тыс. т';
             }
             return label;
           }
@@ -339,7 +359,97 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
             weight: 'bold'
           },
           callback: function(value) {
-            return value.toFixed(3) + 'K'; // 3 знака после запятой
+            return value.toFixed(3) + 'K';
+          }
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)'
+        }
+      }
+    }
+  };
+
+  const cumulativeChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 12,
+          font: {
+            size: 14,
+            weight: 'bold'
+          },
+          boxWidth: 12
+        }
+      },
+      tooltip: {
+        mode: 'nearest',
+        intersect: true,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 8,
+        titleFont: {
+          size: 12
+        },
+        bodyFont: {
+          size: 12
+        },
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.parsed.y !== null) {
+              label += context.parsed.y.toFixed(2) + ' млн ₽';
+            }
+            return label;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Год проекта',
+          font: {
+            size: 13,
+            weight: 'bold'
+          }
+        },
+        grid: {
+          display: false
+        },
+        ticks: {
+          maxRotation: 45,
+          minRotation: 0,
+          font: {
+            size: 11,
+            weight: 'bold'
+          }
+        }
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Млн рублей',
+          font: {
+            size: 13,
+            weight: 'bold'
+          }
+        },
+        min: cumulativeBounds.min,
+        max: cumulativeBounds.max,
+        ticks: {
+          font: {
+            size: 11,
+            weight: 'bold'
+          },
+          callback: function(value) {
+            return value.toFixed(1) + 'M';
           }
         },
         grid: {
@@ -356,7 +466,8 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
     { key: 'discountedPayback', label: 'Диск. срок окупаемости', value: `${results.financials.discountedPayback} лет` },
     { key: 'cuCost', label: 'Себестоимость УЕ', value: `${results.financials.cuCost.toLocaleString('ru-RU')} ₽/т` },
     { key: 'roi', label: 'ROI', value: results.financials.roi },
-    { key: 'profitabilityIndex', label: 'Индекс доходности', value: results.financials.profitabilityIndex }
+    { key: 'profitabilityIndex', label: 'Индекс доходности', value: results.financials.profitabilityIndex },
+    { key: 'totalInvestment', label: 'Общие инвестиции', value: `${(results.financials.totalInvestment / 1000000).toFixed(1)} млн ₽` }
   ];
 
   return (
@@ -405,13 +516,39 @@ export default function ResultsSection({ results, inputs, onChartsReady }) {
             fontSize: '0.9em',
             fontWeight: '600'
           }}>
-            Денежные потоки
+            Денежные потоки (годовые)
           </h5>
           <div style={{ height: '350px' }}>
             <Bar 
               ref={cashFlowChartRef}
               data={cashFlowData} 
               options={cashFlowChartOptions} 
+              redraw={false}
+            />
+          </div>
+        </div>
+
+        <div style={{ 
+          backgroundColor: 'white', 
+          padding: '12px', 
+          borderRadius: '6px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+          height: '400px'
+        }}>
+          <h5 style={{ 
+            textAlign: 'center', 
+            margin: '0 0 10px 0', 
+            color: '#ff9800',
+            fontSize: '0.9em',
+            fontWeight: '600'
+          }}>
+            Нарастающий итог дисконтированных денежных потоков
+          </h5>
+          <div style={{ height: '350px' }}>
+            <Line 
+              ref={cumulativeChartRef}
+              data={cumulativeData} 
+              options={cumulativeChartOptions} 
               redraw={false}
             />
           </div>
