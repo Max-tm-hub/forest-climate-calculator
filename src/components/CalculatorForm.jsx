@@ -13,8 +13,7 @@ export default function CalculatorForm({ inputs, onInputChange, onSubmit }) {
         { name: "areaHa", label: "Площадь проекта (га)", type: "number", min: 1, max: 10000 },
         { name: "projectYears", label: "Срок проекта (лет)", type: "number", min: 1, max: 100 },
         { name: "discountRate", label: "Ставка дисконтирования (%)", type: "percent", step: 0.1, min: 0, max: 100 },
-        { name: "inflation", label: "Уровень инфляции (%)", type: "percent", step: 0.1, min: 0, max: 50 },
-        { name: "profitTaxRate", label: "Налог на прибыль (%)", type: "percent", step: 0.1, min: 0, max: 100 }
+        { name: "inflation", label: "Уровень инфляции (%)", type: "percent", step: 0.1, min: 0, max: 50 }
       ]
     },
     {
@@ -48,7 +47,8 @@ export default function CalculatorForm({ inputs, onInputChange, onSubmit }) {
         { name: "timberVolumePerHa", label: "Объем древесины (м³/га)", type: "number" },
         { name: "timberHarvestCost", label: "Стоимость заготовки (руб/м³)", type: "number" },
         { name: "transportCostPerKm", label: "Транспорт (руб/км/м³)", type: "number" },
-        { name: "transportDistance", label: "Расстояние транспортировки (км)", type: "number" }
+        { name: "transportDistance", label: "Расстояние транспортировки (км)", type: "number" },
+        { name: "profitTaxRate", label: "Налог на прибыль (%)", type: "percent", step: 0.1, min: 0, max: 100 }
       ]
     }
   ];
@@ -147,3 +147,4 @@ export default function CalculatorForm({ inputs, onInputChange, onSubmit }) {
     </form>
   );
 }
+
