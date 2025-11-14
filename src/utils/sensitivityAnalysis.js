@@ -3,7 +3,7 @@ import { calculateProject } from './calculator';
 
 export const SENSITIVITY_PARAMETERS = {
   carbonUnitPrice: { min: 500, max: 2000, step: 100, label: 'Цена УЕ (руб/т)' },
-  discountRate: { min: 0.1, max: 0.4, step: 0.05, label: 'Ставка дисконтирования (%)' },
+  discountRate: { min: 5, max: 30, step: 2.5, label: 'Ставка дисконтирования (%)' }, // Исправлены диапазоны
   areaHa: { min: 100, max: 5000, step: 100, label: 'Площадь (га)' },
   timberPrice: { min: 1000, max: 5000, step: 200, label: 'Цена древесины (руб/м³)' },
   projectYears: { min: 20, max: 100, step: 10, label: 'Срок проекта (лет)' }
@@ -17,7 +17,8 @@ export const calculateSensitivityAnalysis = (baseInputs, parameter, range = { mi
     const multiplier = 1 + (percent / 100);
     
     // Применяем изменение к выбранному параметру
-    if (parameter === 'discountRate') {
+    if (parameter === 'discountRate' || parameter === 'inflation' || parameter === 'profitTaxRate') {
+      // Для процентных параметров изменяем на абсолютное значение
       modifiedInputs[parameter] = baseInputs[parameter] * multiplier;
     } else {
       modifiedInputs[parameter] = Math.round(baseInputs[parameter] * multiplier);
