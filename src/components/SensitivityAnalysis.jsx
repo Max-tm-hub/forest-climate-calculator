@@ -10,7 +10,7 @@ import {
   Tooltip, 
   Legend 
 } from 'chart.js';
-import { calculateSensitivityAnalysis, SENSITIVITY_PARAMETERS, calculateBreakEvenAnalysis } from '../utils/sensitivityAnalysis';
+import { calculateSensitivityAnalysis, SENSITIVITY_PARAMETERS, calculateBreakEvenAnalysis, calculateParameterElasticity } from '../utils/sensitivityAnalysis';
 
 ChartJS.register(
   CategoryScale, 
@@ -36,11 +36,16 @@ export default function SensitivityAnalysis({ inputs, results }) {
     return calculateBreakEvenAnalysis(inputs);
   }, [inputs, results]);
 
+  const parameterElasticity = useMemo(() => {
+    if (!inputs) return 0;
+    return calculateParameterElasticity(inputs, selectedParameter);
+  }, [inputs, selectedParameter]);
+
   const chartData = showBreakEven ? breakEvenData?.fullAnalysis : sensitivityData;
 
   const chartConfig = {
     labels: chartData?.map(item => 
-      showBreakEven ? `${item.value} руб` : `${item.percentChange}%`
+      showBreakEven ? `${Math.round(item.value)} руб` : `${item.percentChange}%`
     ) || [],
     datasets: [
       {
@@ -51,6 +56,10 @@ export default function SensitivityAnalysis({ inputs, results }) {
         tension: 0.3,
         fill: true,
         yAxisID: 'y',
+        pointBackgroundColor: '#1976d2',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
       }
     ]
   };
@@ -77,6 +86,12 @@ export default function SensitivityAnalysis({ inputs, results }) {
               label += context.parsed.y.toFixed(2) + ' млн руб';
             }
             return label;
+          },
+          afterLabel: function(context) {
+            if (showBreakEven) {
+              return `Цена УЕ: ${chartData[context.dataIndex].value} руб/т`;
+            }
+            return `Изменение: ${chartData[context.dataIndex].percentChange}%`;
           }
         }
       }
@@ -95,6 +110,11 @@ export default function SensitivityAnalysis({ inputs, results }) {
         title: {
           display: true,
           text: 'NPV (млн руб)'
+        },
+        ticks: {
+          callback: function(value) {
+            return value.toFixed(1) + 'M';
+          }
         }
       }
     }
@@ -155,6 +175,29 @@ export default function SensitivityAnalysis({ inputs, results }) {
         </button>
       </div>
 
+      {!showBreakEven && (
+        <div style={{
+          backgroundColor: '#e8f5e8',
+          padding: '15px',
+          borderRadius: '6px',
+          marginBottom: '20px',
+          border: '1px solid #4caf50'
+        }}>
+          <h4 style={{ margin: '0 0 10px 0', color: '#2e7d32' }}>
+            Эластичность параметра
+          </h4>
+          <div style={{ fontSize: '14px' }}>
+            <strong>Коэффициент эластичности:</strong> {parameterElasticity}
+            <br/>
+            <small>
+              {parameterElasticity > 1 ? 'Высокая чувствительность' : 
+               parameterElasticity > 0.5 ? 'Средняя чувствительность' : 
+               'Низкая чувствительность'}
+            </small>
+          </div>
+        </div>
+      )}
+
       {showBreakEven && breakEvenData && (
         <div style={{
           backgroundColor: '#fff3e0',
@@ -171,20 +214,35 @@ export default function SensitivityAnalysis({ inputs, results }) {
               <strong>Текущий NPV:</strong> {(breakEvenData.currentNpv / 1000000).toFixed(2)} млн руб
             </div>
             <div>
-              <strong>Текущая цена УЕ:</strong> {inputs.carbonUnitPrice} руб/т
+              <strong>Текущая цена УЕ:</strong> {breakEvenData.currentCarbonPrice} руб/т
             </div>
             {breakEvenData.breakEvenPoint && (
               <div>
-                <strong>Точка безубыточности:</strong> {breakEvenData.breakEvenPoint.value} руб/т
+                <strong>Точка безубыточности:</strong> {Math.round(breakEvenData.breakEvenPoint.value)} руб/т
+              </div>
+            )}
+            {!breakEvenData.breakEvenPoint && (
+              <div>
+                <strong>Точка безубыточности:</strong> не достигнута в анализируемом диапазоне
               </div>
             )}
           </div>
         </div>
       )}
 
-      {chartData && (
+      {chartData && chartData.length > 0 ? (
         <div style={{ height: '400px' }}>
           <Line data={chartConfig} options={chartOptions} />
+        </div>
+      ) : (
+        <div style={{ 
+          padding: '40px', 
+          textAlign: 'center', 
+          color: '#666',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '6px'
+        }}>
+          Нет данных для построения графика
         </div>
       )}
 
@@ -205,6 +263,9 @@ export default function SensitivityAnalysis({ inputs, results }) {
             </div>
             <div style={{ padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
               <strong>Волатильность:</strong> {((Math.max(...sensitivityData.map(d => d.npv)) - Math.min(...sensitivityData.map(d => d.npv))) / Math.abs(results.financials.npv) * 100).toFixed(1)}%
+            </div>
+            <div style={{ padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+              <strong>Базовое значение:</strong> {inputs[selectedParameter]} {SENSITIVITY_PARAMETERS[selectedParameter]?.label.includes('(%)') ? '%' : ''}
             </div>
           </div>
         </div>
