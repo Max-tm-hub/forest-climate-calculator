@@ -211,11 +211,11 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       </tr>
       <tr>
         <td>Ставка дисконтирования</td>
-        <td>${inputs.discountRate}%</td> <!-- Исправлено: убрано умножение на 100 -->
+        <td>${inputs.discountRate}%</td>
       </tr>
       <tr>
         <td>Уровень инфляции</td>
-        <td>${inputs.inflation}%</td> <!-- Исправлено: убрано умножение на 100 -->
+        <td>${inputs.inflation}%</td>
       </tr>
       <tr>
         <td>Цена углеродной единицы</td>
@@ -227,7 +227,7 @@ function generateWordHTML(results, inputs, chartImages = {}) {
       </tr>
       <tr>
         <td>Налог на прибыль</td>
-        <td>${inputs.profitTaxRate}%</td> <!-- Исправлено: убрано умножение на 100 -->
+        <td>${inputs.profitTaxRate}%</td>
       </tr>
     </table>
   </div>
@@ -271,6 +271,10 @@ function generateWordHTML(results, inputs, chartImages = {}) {
         <td>Индекс доходности</td>
         <td>${safeText(results.financials.profitabilityIndex)}</td>
       </tr>
+      <tr>
+        <td>Общий объем инвестиций</td>
+        <td>${formatNumber(results.financials.totalInvestment)} руб</td>
+      </tr>
     </table>
   </div>
 
@@ -287,14 +291,14 @@ function generateWordHTML(results, inputs, chartImages = {}) {
         <th>Год</th>
         <th>УЕ (т CO₂)</th>
         <th>Денежный поток (тыс. руб)</th>
-        <th>Дисконтированный ДП (тыс. руб)</th>
+        <th>Нарастающий ДДП (тыс. руб)</th>
       </tr>
       ${keyYears.map(year => `
         <tr>
           <td>${year}</td>
           <td>${formatNumber(results.carbonUnits[year])}</td>
           <td>${formatNumber(results.cashFlows[year] / 1000)}</td>
-          <td>${formatNumber(results.discountedCashFlows[year] / 1000)}</td>
+          <td>${formatNumber((results.cumulativeDiscountedCashFlows ? results.cumulativeDiscountedCashFlows[year] : 0) / 1000)}</td>
         </tr>
       `).join('')}
     </table>
@@ -314,12 +318,22 @@ function generateWordHTML(results, inputs, chartImages = {}) {
     ${chartImages.cashFlowChart ? `
     <div class="chart-section">
       <div class="chart-container">
-        <div class="chart-title">ДИНАМИКА ДЕНЕЖНЫХ ПОТОКОВ</div>
+        <div class="chart-title">ДИНАМИКА ДЕНЕЖНЫХ ПОТОКОВ (ГОДОВЫЕ)</div>
         <img src="${chartImages.cashFlowChart}" alt="График денежных потоков" class="chart-image" />
         <div class="chart-description">Денежные потоки показаны в миллионах рублей</div>
       </div>
     </div>
     ` : '<p>График денежных потоков недоступен</p>'}
+
+    ${chartImages.cumulativeChart ? `
+    <div class="chart-section">
+      <div class="chart-container">
+        <div class="chart-title">НАРАСТАЮЩИЙ ИТОГ ДИСКОНТИРОВАННЫХ ДЕНЕЖНЫХ ПОТОКОВ</div>
+        <img src="${chartImages.cumulativeChart}" alt="График нарастающего итога ДДП" class="chart-image" />
+        <div class="chart-description">Нарастающий итог дисконтированных денежных потоков показан в миллионах рублей</div>
+      </div>
+    </div>
+    ` : '<p>График нарастающего итога ДДП недоступен</p>'}
 
     ${chartImages.carbonChart ? `
     <div class="chart-section">
@@ -359,12 +373,13 @@ function generateConclusion(results, inputs) {
   const npv = results.financials.npv;
   const irr = results.financials.irr;
   const cuCost = results.financials.cuCost;
+  const roi = results.financials.roi;
   
   let conclusion = '<p>';
   
   if (npv > 0) {
     conclusion += `Проект демонстрирует положительную экономическую эффективность с NPV ${formatNumber(npv)} руб. `;
-    conclusion += `Внутренняя норма доходности составляет ${irr}. `;
+    conclusion += `Внутренняя норма доходности составляет ${irr}, а рентабельность инвестиций (ROI) - ${roi}. `;
   } else {
     conclusion += `Проект имеет отрицательный NPV (${formatNumber(npv)} руб), что свидетельствует `;
     conclusion += `о его экономической нецелесообразности в текущих условиях. `;
@@ -466,8 +481,10 @@ export async function exportToWord(results, inputs, chartRefs = {}) {
     console.log('Starting Word export...', {
       hasCashFlowChart: !!chartRefs.cashFlowChart,
       hasCarbonChart: !!chartRefs.carbonChart,
+      hasCumulativeChart: !!chartRefs.cumulativeChart,
       cashFlowCanvas: chartRefs.cashFlowChart?.canvas,
-      carbonCanvas: chartRefs.carbonChart?.canvas
+      carbonCanvas: chartRefs.carbonChart?.canvas,
+      cumulativeCanvas: chartRefs.cumulativeChart?.canvas
     });
 
     // Даем время на полную отрисовку графиков
@@ -482,6 +499,14 @@ export async function exportToWord(results, inputs, chartRefs = {}) {
       console.log('Cash flow chart converted:', !!chartImages.cashFlowChart);
     } else {
       console.error('Cash flow chart reference is missing');
+    }
+    
+    if (chartRefs.cumulativeChart) {
+      console.log('Converting cumulative chart...');
+      chartImages.cumulativeChart = chartToBase64(chartRefs.cumulativeChart);
+      console.log('Cumulative chart converted:', !!chartImages.cumulativeChart);
+    } else {
+      console.error('Cumulative chart reference is missing');
     }
     
     if (chartRefs.carbonChart) {
